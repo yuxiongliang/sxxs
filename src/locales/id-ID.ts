@@ -5,6 +5,7 @@ import network from './id-ID/network';
 import pages from './id-ID/pages';
 import settingDrawer from './id-ID/settingDrawer';
 import settings from './id-ID/settings';
+import site from './id-ID/site';
 
 export default {
   'navbar.lang': 'Bahasa',
@@ -17,6 +18,7 @@ export default {
   ...settingDrawer,
   ...settings,
   ...network,
+  ...site,
   ...component,
   ...pages,
 };

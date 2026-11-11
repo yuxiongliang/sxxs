@@ -15,8 +15,8 @@ import {
 import {
   FormattedMessage,
   Helmet,
-  SelectLang,
   history,
+  SelectLang,
   useIntl,
   useModel,
 } from '@umijs/max';
@@ -24,8 +24,8 @@ import { Alert, App, Button, Tabs } from 'antd';
 import { createStyles } from 'antd-style';
 import React, { startTransition, useState } from 'react';
 import { Footer } from '@/components';
-import { login as authLogin } from '@/services/auth/api';
 import { getFakeCaptcha } from '@/services/ant-design-pro/login';
+import { login as authLogin } from '@/services/auth/api';
 import { setAccessToken } from '@/utils/authToken';
 import Settings from '../../../../config/defaultSettings';
 
@@ -33,10 +33,12 @@ import Settings from '../../../../config/defaultSettings';
  * Validate redirect URL to prevent open redirect attacks.
  * Only allow same-origin relative paths starting with '/'.
  */
-const getSafeRedirectUrl = (redirect: string | null): string => {
-  if (!redirect?.startsWith('/')) return '/';
+const DEFAULT_AFTER_LOGIN = '/dashboard/analysis';
 
-  if (redirect.startsWith('//')) return '/';
+const getSafeRedirectUrl = (redirect: string | null): string => {
+  if (!redirect?.startsWith('/')) return DEFAULT_AFTER_LOGIN;
+
+  if (redirect.startsWith('//')) return DEFAULT_AFTER_LOGIN;
 
   try {
     const parsed = new URL(redirect, window.location.origin);

@@ -5,6 +5,7 @@ import network from './ja-JP/network';
 import pages from './ja-JP/pages';
 import settingDrawer from './ja-JP/settingDrawer';
 import settings from './ja-JP/settings';
+import site from './ja-JP/site';
 
 export default {
   'navBar.lang': '言語',
@@ -18,6 +19,7 @@ export default {
   ...settingDrawer,
   ...settings,
   ...network,
+  ...site,
   ...component,
   ...pages,
 };

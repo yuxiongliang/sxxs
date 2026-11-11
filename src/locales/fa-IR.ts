@@ -5,6 +5,7 @@ import network from './fa-IR/network';
 import pages from './fa-IR/pages';
 import settingDrawer from './fa-IR/settingDrawer';
 import settings from './fa-IR/settings';
+import site from './fa-IR/site';
 
 export default {
   'navBar.lang': 'زبان ها  ',
@@ -17,6 +18,7 @@ export default {
   ...settingDrawer,
   ...settings,
   ...network,
+  ...site,
   ...component,
   ...pages,
 };

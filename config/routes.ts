@@ -470,10 +470,11 @@ export default [
     layout: false,
     redirect: '/portal/seller',
   },
+  // 站点根 = 公开落地页（无需登录）
   {
     path: '/',
     layout: false,
-    redirect: '/dashboard/analysis',
+    component: './site',
   },
   {
     component: './exception/404',

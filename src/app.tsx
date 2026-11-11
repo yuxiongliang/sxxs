@@ -22,12 +22,24 @@ import {
 } from '@/components';
 import { type AuthTenant, me as queryMe } from '@/services/auth/api';
 import { getTenantSubscription } from '@/services/platform/api';
+import { AppThemeProvider } from '@/theme';
 import { clearAccessToken, getAccessToken } from '@/utils/authToken';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 
 const isDev = process.env.NODE_ENV === 'development';
 const loginPath = '/user/login';
+
+/**
+ * 无需登录即可访问的路径。
+ * 根路径是公开落地页 —— 未登录用户不应被弹到登录页。
+ */
+const PUBLIC_PATHS = [
+  '/',
+  loginPath,
+  '/user/register',
+  '/user/register-result',
+];
 
 /**
  * @see https://umijs.org/docs/api/runtime-config#getinitialstate
@@ -103,11 +115,7 @@ export async function getInitialState(): Promise<{
 
   // 如果不是登录页面，执行
   const { location } = history;
-  if (
-    ![loginPath, '/user/register', '/user/register-result'].includes(
-      location.pathname,
-    )
-  ) {
+  if (!PUBLIC_PATHS.includes(location.pathname)) {
     const session = await fetchSession();
     const features = session ? await fetchPlanFeatures() : undefined;
     return {
@@ -208,7 +216,10 @@ export const layout: RunTimeLayoutConfig = ({
     onPageChange: () => {
       const { location } = history;
       // 如果没有登录，重定向到 login
-      if (!initialState?.currentUser && location.pathname !== loginPath) {
+      if (
+        !initialState?.currentUser &&
+        !PUBLIC_PATHS.includes(location.pathname)
+      ) {
         history.replace(
           `${loginPath}?redirect=${encodeURIComponent(location.pathname + location.search + location.hash)}`,
         );
@@ -298,10 +309,12 @@ export const request: RequestConfig = {
 };
 
 export function rootContainer(container: React.ReactNode) {
+  // AppThemeProvider 必须在最外层：antd 的弹窗/下拉/消息走 portal 到 body，
+  // 只有包到根上，它们才拿得到暗色主题。
   return (
-    <>
+    <AppThemeProvider>
       <OfflineBanner />
       <ErrorBoundary>{container}</ErrorBoundary>
-    </>
+    </AppThemeProvider>
   );
 }

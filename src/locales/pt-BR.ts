@@ -5,6 +5,7 @@ import network from './pt-BR/network';
 import pages from './pt-BR/pages';
 import settingDrawer from './pt-BR/settingDrawer';
 import settings from './pt-BR/settings';
+import site from './pt-BR/site';
 
 export default {
   'navBar.lang': 'Idiomas',
@@ -17,6 +18,7 @@ export default {
   ...settingDrawer,
   ...settings,
   ...network,
+  ...site,
   ...component,
   ...pages,
 };

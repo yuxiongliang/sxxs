@@ -5,6 +5,7 @@ import network from './bn-BD/network';
 import pages from './bn-BD/pages';
 import settingDrawer from './bn-BD/settingDrawer';
 import settings from './bn-BD/settings';
+import site from './bn-BD/site';
 
 export default {
   'navBar.lang': 'ভাষা',
@@ -17,6 +18,7 @@ export default {
   ...settingDrawer,
   ...settings,
   ...network,
+  ...site,
   ...component,
   ...pages,
 };
