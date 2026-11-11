@@ -1,1 +1,13 @@
-lint-staged
+#!/bin/sh
+# 提交前检查：先密钥闸门（更重要），再代码规范。
+# 注意：不依赖 PATH 里的 lint-staged —— git 执行钩子时 node_modules/.bin 通常不在 PATH。
+
+# 1) 密钥/隐私闸门
+node scripts/check-secrets.mjs || exit 1
+
+# 2) 代码规范（未安装依赖时跳过，避免克隆后首次提交被卡住）
+if [ -x node_modules/.bin/lint-staged ]; then
+  node_modules/.bin/lint-staged || exit 1
+fi
+
+exit 0
