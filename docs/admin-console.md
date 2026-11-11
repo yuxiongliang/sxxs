@@ -1,6 +1,6 @@
 # Admin Console (Ant Design Pro 6 + FastAPI)
 
-This repository now contains a small but complete admin console layer on top of the Ant Design Pro 6 template.
+This repository contains the admin console of 赛霄玄思, a multi-tenant C2C marketplace platform.
 
 ## Frontend routes
 
@@ -63,7 +63,9 @@ API_BASE_URL=https://api.example.com/api/v1 npm run build
 - `GET /api/v1/auth/me` returns user, tenants, roles, permission codes and permission version.
 - `POST /api/v1/auth/refresh` rotates the refresh token; `POST /api/v1/auth/logout` revokes it.
 - Admin endpoints use `require_permission(...)`; unauthorized direct API calls return 401/403.
-- Demo accounts: `admin / ant.design` (admin), `lisi / Antd@123456` (operator).
+- Demo accounts: the seeded usernames are `admin` (administrator) and `lisi` (operator).
+  Their initial passwords are produced by the seeding logic for **local demos only** and
+  are intentionally not documented here. Change them before exposing the service publicly.
 - Permissions are stored in `permissions`, `role_permissions`, `member_roles`; the front-end maps them in `src/access.ts`.
 - Redis stores refresh tokens and short-lived permission cache entries. If Redis is unavailable, protected APIs fail closed.
 

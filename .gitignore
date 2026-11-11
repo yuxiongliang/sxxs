@@ -91,3 +91,7 @@ uploads/
 .pi/
 .unipi/
 *.local
+
+# --- 内部资料：仅保留在本地，不发布到公开仓库 ---
+plans/
+.claude/

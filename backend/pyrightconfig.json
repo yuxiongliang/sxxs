@@ -1,10 +1,12 @@
 {
-  "venvPath": "/Users/yuxiongliang/Desktop/com.sxxs.cn/ant-design-pro/backend",
+  "venvPath": ".",
   "venv": ".venv",
   "pythonVersion": "3.12",
-  "extraPaths": [
-    "/Users/yuxiongliang/Desktop/com.sxxs.cn/ant-design-pro/backend/.venv/lib/python3.12/site-packages"
+  "include": [
+    "app"
   ],
-  "include": ["app"],
-  "exclude": ["**/__pycache__", "**/.venv"]
+  "exclude": [
+    "**/__pycache__",
+    "**/.venv"
+  ]
 }
