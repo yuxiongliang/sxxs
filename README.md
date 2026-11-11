@@ -198,6 +198,22 @@ API_BASE_URL=http://127.0.0.1:9000 npm run build && npx max preview --port 8002
 | 端到端 | `npm run e2e:regression` | 需同时启动前后端与服务依赖 |
 | CI | `.github/workflows/admin-console.yml` | 后端（Postgres+Redis 服务）+ 前端双 Job |
 
+## 提交前检查
+
+仓库启用了 husky 钩子，`git commit` 时会依次执行：
+
+1. **密钥闸门** `scripts/check-secrets.mjs`：拦截 `.env`、证书私钥、SSH 私钥、用户上传附件；
+   并按特征匹配 AWS / 阿里云 / GitHub / Google / Slack 密钥与私钥块（占位符文案自动放行）。
+2. **代码规范** `lint-staged`：只对本次暂存且匹配的文件跑格式化与检查。
+
+```bash
+node scripts/check-secrets.mjs           # 手动检查暂存区
+node scripts/check-secrets.mjs --all     # 全仓库自检（当前 0 误报）
+git commit --no-verify                   # 跳过钩子（确认内容安全再用）
+```
+
+克隆后执行一次 `npm install` 即可自动启用（`prepare` 脚本会执行 `npx husky` 注册钩子）。
+
 ## 相关文档
 
 - 运维与接口速查：[docs/admin-console.md](./docs/admin-console.md)
