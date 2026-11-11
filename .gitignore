@@ -1,0 +1,93 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+**/node_modules
+# roadhog-api-doc ignore
+/src/utils/request-temp.js
+_roadhog-api-doc
+
+# production
+/dist
+
+# misc
+.DS_Store
+npm-debug.log*
+yarn-error.log
+
+/coverage
+.idea
+yarn.lock
+*bak
+.vscode
+
+
+# visual studio code
+.history
+*.log
+functions/*
+.temp/**
+
+# claude code local settings
+.claude/settings.local.json
+
+# umi
+.umi
+.umi-production
+.umi-test
+.umi-undefined
+.turbopack
+
+# screenshot
+screenshot
+.firebase
+
+build
+
+# worktrees
+.worktrees
+
+# superpowers docs
+docs/superpowers
+
+# cloudflare wrangler
+.wrangler
+requestRecord.mock.js
+
+.vitest
+e2e-out
+# ============================================================
+# 本项目在模板基础上的补充忽略规则（仓库不发布密钥/隐私数据）
+# ============================================================
+
+# --- 环境变量与密钥 ---
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# --- Python 虚拟环境与缓存 ---
+backend/.venv
+.venv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# --- 用户上传的附件（可能含个人隐私） ---
+backend/uploads/
+uploads/
+
+# --- 上游模板 git 历史的本地备份（不发布） ---
+.git-upstream-backup/
+
+# --- 其他本地产物 ---
+.jev-fabric-native/
+.pi/
+.unipi/
+*.local

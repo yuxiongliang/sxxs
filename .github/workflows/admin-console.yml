@@ -1,0 +1,99 @@
+# CI for the admin console built on top of the Ant Design Pro template.
+#
+# `ci.yml` (the template's own workflow) only covers the frontend. This one adds
+# the FastAPI backend, which needs PostgreSQL + Redis to run its 228 tests, plus
+# the browser-free unit lane (`npm run test:node`).
+#
+# The real-stack Playwright regression (`npm run e2e:regression`) is still run
+# locally: it needs the dev server, the API and seeded demo data all at once.
+name: Admin Console
+
+on:
+  push:
+    branches: [master]
+    paths: &watch
+      - 'backend/**'
+      - 'src/**'
+      - 'config/**'
+      - 'e2e/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'biome.json'
+      - 'vitest.node.config.ts'
+      - '.github/workflows/admin-console.yml'
+  pull_request:
+    paths: *watch
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-console-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (ruff / pyright / pytest)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          # conftest.py builds a passwordless DSN, so the cluster must trust
+          # local TCP connections.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd 'redis-cli ping'
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # tests/conftest.py reads these and points at redis db 15 on its own.
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --group dev
+      - name: Lint (ruff)
+        run: uvx ruff check app tests migrations
+      - name: Type check (pyright)
+        run: uvx pyright app
+      - name: Tests (pytest)
+        run: uv run pytest tests/ -q
+
+  frontend:
+    name: Frontend (tsc / biome / unit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # actions/setup-node v7.1.0 (same pin as the template's ci.yml)
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run tsc
+      - run: npm run biome:lint
+      - run: npm run test:node
