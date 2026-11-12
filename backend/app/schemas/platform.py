@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class TenantDomainCreate(BaseModel):
@@ -35,8 +35,18 @@ class TenantCategoryAssign(BaseModel):
 class TenantCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     slug: str = Field(min_length=2, max_length=64, pattern="^[a-z0-9-]+$")
-    email: str = Field(min_length=3, max_length=128)
-    nickname: str = Field(min_length=1, max_length=64)
-    password: str = Field(min_length=6, max_length=128)
+    # 两种开通方式二选一：
+    #   owner_user_id —— 直接选一个已存在的用户当管理员（平台端检索选人）；
+    #   email/nickname/password —— 顺势新建一个管理员账号。
+    owner_user_id: int | None = None
+    email: str | None = Field(default=None, min_length=3, max_length=128)
+    nickname: str | None = Field(default=None, min_length=1, max_length=64)
+    password: str | None = Field(default=None, min_length=6, max_length=128)
     # 开通时就归到某个业务类目（决定抽佣比例）；不传表示暂未分类。
     service_category_id: int | None = None
+
+    @model_validator(mode="after")
+    def _check_owner(self):
+        if self.owner_user_id is None and not (self.email and self.nickname and self.password):
+            raise ValueError("要么选一个已有用户作为管理员，要么提供邮箱/昵称/初始密码")
+        return self

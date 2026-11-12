@@ -26,6 +26,7 @@ import {
   assignTenantCategory,
   createTenant,
   listPlans,
+  listPlatformUsers,
   listServiceCategories,
   listTenantOverview,
   listTenantsWithPlan,
@@ -51,39 +52,6 @@ const statusColor = (status?: string) =>
       : status === 'suspended' || status === 'past_due'
         ? 'red'
         : 'default';
-
-function BrandCell({ overview }: { overview?: TenantOverviewRecord }) {
-  if (!overview) return <Typography.Text type="secondary">—</Typography.Text>;
-  return (
-    <Space orientation="vertical" size={0}>
-      <Typography.Text>{overview.brand.display_name}</Typography.Text>
-      <Space size={4}>
-        {overview.brand.customized ? (
-          <Tag color="blue">已自定义</Tag>
-        ) : (
-          <Tag>默认</Tag>
-        )}
-        {overview.brand.has_logo ? <Tag color="purple">有 logo</Tag> : null}
-      </Space>
-    </Space>
-  );
-}
-
-function PaymentCell({ overview }: { overview?: TenantOverviewRecord }) {
-  if (!overview) return <Typography.Text type="secondary">—</Typography.Text>;
-  return (
-    <Space orientation="vertical" size={0}>
-      {overview.payment.configured ? (
-        <Tag color="green">已配置</Tag>
-      ) : (
-        <Tag color="red">未配置</Tag>
-      )}
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        source: {overview.payment.source}
-      </Typography.Text>
-    </Space>
-  );
-}
 
 function DomainCell({ overview }: { overview?: TenantOverviewRecord }) {
   if (!overview) return <Typography.Text type="secondary">—</Typography.Text>;
@@ -115,6 +83,7 @@ const PlatformTenantsPage: React.FC = () => {
   const [createForm] = Form.useForm();
   const [renameForm] = Form.useForm();
   const [categoryForm] = Form.useForm();
+  const [ownerKeyword, setOwnerKeyword] = useState('');
 
   const tenants = useQuery({
     queryKey: ['platform-tenants-plan'],
@@ -122,6 +91,13 @@ const PlatformTenantsPage: React.FC = () => {
   });
   const plans = useQuery({ queryKey: ['platform-plans'], queryFn: listPlans });
   // 业务类目：决定抽佣比例，开通租户与「归类」都要用
+  // 开通租户时的管理员候选：按关键词实时检索全站用户
+  const ownerCandidates = useQuery({
+    queryKey: ['owner-picker', ownerKeyword],
+    queryFn: () =>
+      listPlatformUsers({ pageSize: 20, keyword: ownerKeyword || undefined }),
+    enabled: createOpen,
+  });
   const categories = useQuery({
     queryKey: ['service-categories'],
     queryFn: () => listServiceCategories(),
@@ -239,22 +215,6 @@ const PlatformTenantsPage: React.FC = () => {
         ) : (
           <Tag color="red">未分类</Tag>
         ),
-    },
-    {
-      title: '品牌',
-      key: 'brand',
-      width: 150,
-      render: (_, record) => (
-        <BrandCell overview={overviewByTenant.get(record.id)} />
-      ),
-    },
-    {
-      title: '支付',
-      key: 'payment',
-      width: 130,
-      render: (_, record) => (
-        <PaymentCell overview={overviewByTenant.get(record.id)} />
-      ),
     },
     {
       title: '域名',
@@ -409,18 +369,23 @@ const PlatformTenantsPage: React.FC = () => {
             <Input placeholder="acme" />
           </Form.Item>
           <Form.Item
-            label="管理员邮箱"
-            name="email"
-            rules={[{ required: true }]}
+            label="租户管理员"
+            name="owner_user_id"
+            rules={[{ required: true, message: '请选择租户管理员' }]}
+            extra="按手机号 / 邮箱 / 用户ID / 用户名搜索站内已有用户；选中后直接挂成该租户的管理员，不新建账号。"
           >
-            <Input placeholder="owner@example.com" />
-          </Form.Item>
-          <Form.Item
-            label="管理员昵称"
-            name="nickname"
-            rules={[{ required: true }]}
-          >
-            <Input placeholder="站长" />
+            <Select
+              showSearch={{
+                filterOption: false,
+                onSearch: (value: string) => setOwnerKeyword(value.trim()),
+              }}
+              placeholder="输入手机号 / 邮箱 / 用户ID / 用户名"
+              loading={ownerCandidates.isFetching}
+              options={(ownerCandidates.data?.list ?? []).map((item) => ({
+                value: item.id,
+                label: `${item.username}（${item.public_id}）`,
+              }))}
+            />
           </Form.Item>
           <Form.Item
             label="服务类目"

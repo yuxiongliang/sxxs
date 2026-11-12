@@ -33,8 +33,15 @@ export default function PlatformUsersPage() {
         <Typography.Text copyable>{value}</Typography.Text>
       ),
     },
-    { title: '昵称', dataIndex: 'nickname', width: 160 },
-    { title: '账号', dataIndex: 'username', width: 220, ellipsis: true },
+    {
+      title: '用户名',
+      dataIndex: 'username',
+      width: 260,
+      ellipsis: true,
+      render: (value: string) => (
+        <Typography.Text copyable>{value}</Typography.Text>
+      ),
+    },
     { title: '邮箱', dataIndex: 'email', width: 240, ellipsis: true },
     {
       title: '角色',

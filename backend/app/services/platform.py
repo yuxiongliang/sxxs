@@ -21,10 +21,11 @@ async def create_tenant(
     db: AsyncSession,
     name: str,
     slug: str,
-    email: str,
-    nickname: str,
-    password: str,
+    email: str | None = None,
+    nickname: str | None = None,
+    password: str | None = None,
     *,
+    owner_user_id: int | None = None,
     service_category_id: int | None = None,
 ) -> Tenant:
     if (await db.scalars(select(Tenant).where(Tenant.slug == slug))).first():
@@ -37,21 +38,31 @@ async def create_tenant(
     if service_category_id is not None:
         await category_service.assign_tenant(db, tenant, service_category_id)
 
-    user = (await db.scalars(select(User).where(User.email == email))).first()
-    if user is None:
-        user = User(
-            username=email,
-            nickname=nickname,
-            email=email,
-            role="tenant_owner",
-            status="active",
-            password_hash=hash_password(password),
-        )
-        db.add(user)
-        await db.flush()
+    if owner_user_id is not None:
+        # 平台端从用户列表里选人：直接把这个已有用户挂成租户管理员，不新建账号
+        user = await db.get(User, owner_user_id)
+        if user is None:
+            raise HTTPException(status_code=404, detail="用户不存在")
+        if user.status != "active":
+            raise HTTPException(status_code=400, detail="该用户已停用，不能作为租户管理员")
     else:
-        user.password_hash = hash_password(password)
-        user.status = "active"
+        if not email or not nickname or not password:
+            raise HTTPException(status_code=400, detail="缺少管理员邮箱/昵称/初始密码")
+        user = (await db.scalars(select(User).where(User.email == email))).first()
+        if user is None:
+            user = User(
+                username=email,
+                nickname=nickname,
+                email=email,
+                role="tenant_owner",
+                status="active",
+                password_hash=hash_password(password),
+            )
+            db.add(user)
+            await db.flush()
+        else:
+            user.password_hash = hash_password(password)
+            user.status = "active"
 
     member = TenantMember(tenant_id=tenant.id, user_id=user.id, status="active")
     db.add(member)

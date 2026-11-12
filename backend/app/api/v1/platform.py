@@ -42,6 +42,7 @@ async def create_tenant(
         payload.email,
         payload.nickname,
         payload.password,
+        owner_user_id=payload.owner_user_id,
         service_category_id=payload.service_category_id,
     )
     return ok(

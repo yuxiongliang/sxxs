@@ -106,9 +106,11 @@ export const listTenants = () => apiGet<TenantRecord[]>('/platform/tenants');
 export const createTenant = (data: {
   name: string;
   slug: string;
-  email: string;
-  nickname: string;
-  password: string;
+  /** 从平台用户列表里选中的管理员；与 email/nickname/password 二选一 */
+  owner_user_id?: number | null;
+  email?: string;
+  nickname?: string;
+  password?: string;
   service_category_id?: number | null;
 }) => apiPost<TenantRecord>('/platform/tenants', data);
 

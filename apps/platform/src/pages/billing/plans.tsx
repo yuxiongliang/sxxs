@@ -34,7 +34,6 @@ function periodLabel(record: PlanRecord): string {
 }
 
 interface PlanFormValues {
-  code?: string;
   name: string;
   price_yuan: number;
   duration_months?: number | null;
@@ -62,7 +61,11 @@ export default function BillingPlansPage() {
         duration_months: values.duration_months ?? null,
       };
       if (editing) return updatePlan(editing.id, payload);
-      return createPlan({ ...payload, code: values.code as string });
+      // 编码不再让运营填：内部用时间戳生成一个稳定唯一值（列表里也不展示）
+      return createPlan({
+        ...payload,
+        code: `plan-${Date.now().toString(36)}`,
+      });
     },
     onSuccess: () => {
       message.success(editing ? '套餐已更新' : '套餐已创建');
@@ -215,22 +218,6 @@ export default function BillingPlansPage() {
           layout="vertical"
           onFinish={(values) => save.mutate(values)}
         >
-          {editing ? null : (
-            <Form.Item
-              name="code"
-              label="套餐编码"
-              rules={[
-                {
-                  required: true,
-                  pattern: /^[a-z0-9-]+$/,
-                  message: '仅小写字母/数字/中划线',
-                },
-              ]}
-              extra="只用于内部识别，列表里不展示；创建后不可修改。"
-            >
-              <Input placeholder="yearly-12" />
-            </Form.Item>
-          )}
           <Form.Item name="name" label="套餐名称" rules={[{ required: true }]}>
             <Input placeholder="包年版" />
           </Form.Item>
