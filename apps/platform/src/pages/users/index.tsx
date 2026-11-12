@@ -1,10 +1,12 @@
 import { ReloadOutlined, TeamOutlined } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
+  App,
   Button,
   Card,
   Input,
+  Popconfirm,
   Space,
   Table,
   Tag,
@@ -14,11 +16,26 @@ import type { ColumnsType } from 'antd/es/table';
 import { useState } from 'react';
 import PageShell from '@/components/PageShell';
 import type { PlatformUserRecord } from '@/services/api';
-import { listPlatformUsers } from '@/services/api';
+import { listPlatformUsers, setPlatformUserStatus } from '@/services/api';
 import { labelOf, USER_ROLE, USER_STATUS } from '@/utils/labels';
 
 export default function PlatformUsersPage() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const [keyword, setKeyword] = useState('');
+
+  const toggle = useMutation({
+    mutationFn: (record: PlatformUserRecord) =>
+      setPlatformUserStatus(
+        record.id,
+        record.status === 'active' ? 'disabled' : 'active',
+      ),
+    onSuccess: (result) => {
+      message.success(result.status === 'active' ? '用户已启用' : '用户已停用');
+      queryClient.invalidateQueries({ queryKey: ['platform-users'] });
+    },
+    onError: (error: Error) => message.error(error.message),
+  });
   const users = useQuery({
     queryKey: ['platform-users', keyword],
     queryFn: () =>
@@ -43,7 +60,41 @@ export default function PlatformUsersPage() {
         <Typography.Text copyable>{value}</Typography.Text>
       ),
     },
+    {
+      title: '手机号',
+      dataIndex: 'phone',
+      width: 150,
+      render: (value?: string | null) => value || '—',
+    },
     { title: '邮箱', dataIndex: 'email', width: 240, ellipsis: true },
+    {
+      title: '操作',
+      width: 110,
+      render: (_, record) =>
+        record.is_platform_admin ? (
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            平台账号
+          </Typography.Text>
+        ) : (
+          <Popconfirm
+            title={
+              record.status === 'active'
+                ? '停用后该用户无法登录，确认？'
+                : '重新启用该用户？'
+            }
+            onConfirm={() => toggle.mutate(record)}
+          >
+            <Button
+              type="link"
+              size="small"
+              danger={record.status === 'active'}
+              loading={toggle.isPending}
+            >
+              {record.status === 'active' ? '停用' : '启用'}
+            </Button>
+          </Popconfirm>
+        ),
+    },
     {
       title: '角色',
       dataIndex: 'role',

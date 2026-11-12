@@ -37,7 +37,6 @@ const percentToBps = (value: number | null | undefined) =>
   Math.round((value ?? 0) * 100);
 
 interface CategoryFormValues {
-  code: string;
   name: string;
   description?: string;
   commission_percent: number;
@@ -71,7 +70,11 @@ export default function ServiceCategoriesPage() {
         sort: values.sort ?? 0,
       };
       if (editing) return updateServiceCategory(editing.id, payload);
-      return createServiceCategory({ ...payload, code: values.code });
+      // 编码不再让运营填：内部生成一个稳定唯一值（列表里也不展示）
+      return createServiceCategory({
+        ...payload,
+        code: `cat-${Date.now().toString(36)}`,
+      });
     },
     onSuccess: () => {
       message.success(editing ? '类目已更新' : '类目已创建');
@@ -97,14 +100,6 @@ export default function ServiceCategoriesPage() {
 
   const columns: ColumnsType<ServiceCategoryRecord> = [
     { title: '类目名称', dataIndex: 'name', width: 200 },
-    {
-      title: '编码',
-      dataIndex: 'code',
-      width: 160,
-      render: (value: string) => (
-        <Typography.Text code>{value}</Typography.Text>
-      ),
-    },
     {
       title: '抽佣比例',
       dataIndex: 'commission_bps',
@@ -151,7 +146,6 @@ export default function ServiceCategoriesPage() {
             onClick={() => {
               setEditing(record);
               form.setFieldsValue({
-                code: record.code,
                 name: record.name,
                 description: record.description,
                 commission_percent: record.commission_bps / 100,
@@ -246,19 +240,6 @@ export default function ServiceCategoriesPage() {
           layout="vertical"
           onFinish={(values) => save.mutate(values)}
         >
-          <Form.Item
-            name="code"
-            label="编码"
-            rules={[
-              {
-                required: true,
-                pattern: /^[a-z0-9-]+$/,
-                message: '仅小写字母/数字/中划线',
-              },
-            ]}
-          >
-            <Input disabled={Boolean(editing)} placeholder="second-hand" />
-          </Form.Item>
           <Form.Item name="name" label="类目名称" rules={[{ required: true }]}>
             <Input placeholder="二手交易" />
           </Form.Item>

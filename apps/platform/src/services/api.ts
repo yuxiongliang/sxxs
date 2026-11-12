@@ -79,6 +79,8 @@ export interface TenantWithPlan extends TenantRecord {
   quotas: Record<string, number | null>;
   exceeded: string[];
   days_left?: number | null;
+  /** 租户管理员（tenant_owner）：列表展示用户名与用户ID */
+  owner?: { public_id: string; username: string } | null;
   /** 平台级业务类目（决定抽佣比例）；null = 未分类 = 不抽佣 */
   service_category: {
     id: number;
@@ -506,6 +508,9 @@ export const listPlatformUsers = (params: {
     `/platform/users${suffix ? `?${suffix}` : ''}`,
   );
 };
+
+export const setPlatformUserStatus = (userId: number, status: 'active' | 'disabled') =>
+  apiPut<{ id: number; status: string }>(`/platform/users/${userId}/status`, { status });
 
 export interface CommissionRow {
   tenant_id: number;

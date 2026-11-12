@@ -9,8 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_context, get_db, require_platform_permission
 from app.core.response import ok
 from app.models.billing import Plan, TenantSubscription
+from app.models.permission import MemberRole
+from app.models.role import Role
 from app.models.service_category import ServiceCategory
-from app.models.tenant import Tenant
+from app.models.tenant import Tenant, TenantMember
+from app.models.user import User
 from app.schemas.billing import (
     InvoiceOut,
     PlanCreate,
@@ -325,6 +328,24 @@ async def list_tenants_with_plan(
     tenants = await platform_service.list_tenants(db)
     # 业务类目一次查完，避免逐租户查库
     categories = {row.id: row for row in (await db.scalars(select(ServiceCategory))).all()}
+    # 列表要展示「管理员用户名 / 用户ID」：优先 tenant_owner 角色，
+    # 没有该角色时退回最早加入的活动成员（demo 租户就属于后者）
+    member_rows = (
+        await db.execute(
+            select(TenantMember.tenant_id, User.id, User.public_id, User.username, Role.code)
+            .join(User, User.id == TenantMember.user_id)
+            .outerjoin(MemberRole, MemberRole.member_id == TenantMember.id)
+            .outerjoin(Role, Role.id == MemberRole.role_id)
+            .where(TenantMember.status == "active")
+        )
+    ).all()
+    owners: dict[int, dict] = {}
+    best_key: dict[int, tuple[int, int]] = {}
+    for row_tenant_id, user_pk, public_id, username, role_code in member_rows:
+        key = (0 if role_code == "tenant_owner" else 1, user_pk)
+        if row_tenant_id not in best_key or key < best_key[row_tenant_id]:
+            best_key[row_tenant_id] = key
+            owners[row_tenant_id] = {"public_id": public_id, "username": username}
     result = []
     for tenant in tenants:
         report = await billing_service.usage_report(db, tenant.id)
@@ -336,6 +357,7 @@ async def list_tenants_with_plan(
                 "slug": tenant.slug,
                 "status": tenant.status,
                 "created_at": tenant.created_at,
+                "owner": owners.get(tenant.id),
                 "service_category": (
                     {
                         "id": category.id,

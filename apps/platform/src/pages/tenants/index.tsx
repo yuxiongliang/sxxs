@@ -144,17 +144,30 @@ const PlatformTenantsPage: React.FC = () => {
 
   const tenantColumns: ColumnsType<TenantWithPlan> = [
     {
-      title: '租户',
-      dataIndex: 'name',
-      width: 200,
-      render: (value: string, record) => (
+      // 管理员用户ID（对外编号），放在最前面便于对账
+      title: '用户ID',
+      key: 'owner_public_id',
+      width: 250,
+      render: (_, record) =>
+        record.owner ? (
+          <Typography.Text copyable>{record.owner.public_id}</Typography.Text>
+        ) : (
+          <Typography.Text type="secondary">—</Typography.Text>
+        ),
+    },
+    {
+      // 管理员登录用户名；租户名与 slug 保留在第二行，信息不丢
+      title: '用户名',
+      key: 'owner_username',
+      width: 240,
+      render: (_, record) => (
         <Space orientation="vertical" size={0}>
           <Space>
             <ClusterOutlined style={{ color: '#1677ff' }} />
-            <strong>{value}</strong>
+            <strong>{record.owner?.username ?? '—'}</strong>
           </Space>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {record.slug} · #{record.id}
+            {record.name} · {record.slug}
           </Typography.Text>
         </Space>
       ),
