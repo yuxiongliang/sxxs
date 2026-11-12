@@ -133,3 +133,31 @@ async def test_send_notification_rejects_missing_template(client, admin_token):
         },
     )
     assert response.status_code == 400, response.text
+
+
+async def test_notification_prefs_mandatory_inbox_cannot_be_disabled(client, admin_token):
+    """站内信强制开启（欠费/安全/合规通知必须送达），只能关短信/邮件。"""
+    prefs = await client.get("/api/v1/notifications/prefs", headers=bearer(admin_token))
+    assert prefs.status_code == 200, prefs.text
+    channels = {item["channel"]: item for item in prefs.json()["data"]["channels"]}
+    assert channels["inbox"]["mandatory"] is True
+    assert channels["sms"]["enabled"] is True
+
+    saved = await client.put(
+        "/api/v1/notifications/prefs",
+        headers=bearer(admin_token),
+        json={"channel": "sms", "enabled": False},
+    )
+    assert saved.status_code == 200, saved.text
+    again = await client.get("/api/v1/notifications/prefs", headers=bearer(admin_token))
+    sms = next(
+        item for item in again.json()["data"]["channels"] if item["channel"] == "sms"
+    )
+    assert sms["enabled"] is False
+
+    blocked = await client.put(
+        "/api/v1/notifications/prefs",
+        headers=bearer(admin_token),
+        json={"channel": "inbox", "enabled": False},
+    )
+    assert blocked.status_code == 400, blocked.text

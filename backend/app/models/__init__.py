@@ -9,6 +9,7 @@ from app.models.finance import CommissionRule, LedgerEntry, Payout, SettlementBa
 from app.models.im import Conversation, ConversationMember, ImReport, Message
 from app.models.moderation import ModerationCache, ModerationLog
 from app.models.notification import Notification
+from app.models.notification_pref import TenantNotificationPref
 from app.models.notification_template import NotificationTemplate
 from app.models.order import Order, OrderItem, Payment, Refund, SellerOrder, Shipment
 from app.models.permission import MemberRole, Permission, RolePermission
@@ -40,6 +41,7 @@ __all__ = [
     "ModerationLog",
     "Notification",
     "NotificationTemplate",
+    "TenantNotificationPref",
     "Order",
     "OrderItem",
     "Payment",

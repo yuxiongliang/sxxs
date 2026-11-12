@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_context, get_db, require_permission
 from app.core.response import ok, page_data
+from app.models.notification_pref import TenantNotificationPref
 from app.schemas.common import ApiResponse, PageData
 from app.schemas.notification import (
     NotificationCreate,
@@ -102,3 +104,80 @@ async def list_available_templates(
             for row in rows
         ]
     )
+
+
+# 站内信强制开启：欠费/安全/合规通知必须送达，不允许被关掉
+MANDATORY_CHANNELS = {"inbox"}
+OPTIONAL_CHANNELS = ["sms", "email"]
+
+
+@router.get("/prefs", response_model=ApiResponse[dict])
+async def get_prefs(
+    context: AuthContext = Depends(get_current_context),
+    db: AsyncSession = Depends(get_db),
+):
+    rows = list(
+        (
+            await db.scalars(
+                select(TenantNotificationPref).where(
+                    TenantNotificationPref.tenant_id == context.tenant.id
+                )
+            )
+        ).all()
+    )
+    explicit = {row.channel: bool(row.enabled) for row in rows}
+    return ok(
+        {
+            "channels": [
+                {
+                    "channel": channel,
+                    "enabled": True,
+                    "mandatory": True,
+                }
+                for channel in MANDATORY_CHANNELS
+            ]
+            + [
+                {
+                    "channel": channel,
+                    "enabled": explicit.get(channel, True),
+                    "mandatory": False,
+                }
+                for channel in OPTIONAL_CHANNELS
+            ]
+        }
+    )
+
+
+@router.put("/prefs", response_model=ApiResponse[dict])
+async def save_prefs(
+    payload: dict,
+    _context=Depends(require_permission("notification:send")),
+    context: AuthContext = Depends(get_current_context),
+    db: AsyncSession = Depends(get_db),
+):
+    channel = str(payload.get("channel") or "")
+    if channel in MANDATORY_CHANNELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{channel} 是强制渠道，不能关闭",
+        )
+    if channel not in OPTIONAL_CHANNELS:
+        raise HTTPException(status_code=400, detail="不支持的渠道")
+
+    row = (
+        await db.scalars(
+            select(TenantNotificationPref).where(
+                TenantNotificationPref.tenant_id == context.tenant.id,
+                TenantNotificationPref.channel == channel,
+            )
+        )
+    ).first()
+    if row is None:
+        row = TenantNotificationPref(
+            tenant_id=context.tenant.id, channel=channel, enabled=bool(payload.get("enabled", True))
+        )
+        db.add(row)
+    else:
+        row.enabled = bool(payload.get("enabled", True))
+    await db.commit()
+    return ok({"channel": channel, "enabled": row.enabled})
