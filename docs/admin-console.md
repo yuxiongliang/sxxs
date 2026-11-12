@@ -515,3 +515,43 @@ Two Playwright gotchas encoded in `e2e/helpers/auth.ts`:
 > route-level `access`, so only the menu entry was hidden while a direct URL visit
 > rendered the page for an operator without `role:manage`. Both routes now carry
 > `access`, matching the API.
+
+## 自定义域名（B6）
+
+租户身份来自 **请求 Host**（`tenant_domains` 表是唯一事实源）；`?tenant=<slug>` 只是开发兜底。
+
+### 绑定流程（平台端 `/overview` → 右侧「域名」）
+
+1. 填域名（如 `shop.example.com`）→ 绑定后状态是 **待验证**；
+2. 把抽屉里给出的 TXT 记录加到域名服务商：`_sxxs-verify.shop.example.com` = `sxxs-verify=<token>`；
+3. DNS 生效后点 **验证** → **已生效**。只有 active 的域名才会把公开站点解析到该租户。
+
+自有子域（配置了 `TENANT_BASE_DOMAIN` 时，新建租户自动带一条 `<slug>.<基域>`）创建即生效，不需要 TXT。
+
+### 状态含义
+
+| 状态 | 含义 | 会解析到租户吗 |
+|---|---|---|
+| `pending` | 已绑定、未验证 | 否 |
+| `active` | 验证通过（或自有子域） | 是 |
+| `failed` | 最近一次验证没查到 TXT | 否 |
+| `disabled` | 手动停用 | 否 |
+
+租户本身不是 `active` 时，它的域名即使 `active` 也不解析 —— 所以「先停租户、再解绑域名」是安全的。
+
+### 环境变量
+
+| 变量 | 说明 |
+|---|---|
+| `TENANT_BASE_DOMAIN` | 租户子域后缀；留空 = 不自动建子域 |
+| `PLATFORM_HOST` | 平台控制台自己的域名，命中时不做租户解析 |
+| `DOMAIN_VERIFY_PROVIDER` | `none`（默认，verify 直接 503）/ `dns`（需 dnspython）/ `static`（仅测试） |
+| `TENANT_HOST_FALLBACK` | **线上必须 `false`**；本地开发 `true` 时未知 Host 兜底到 demo |
+
+### 运维注意
+
+- **`TENANT_HOST_FALLBACK=false` 是硬要求。** 开着它，任何未知域名都会被当成 demo 站：租户以为域名生效了，买家看到的却是别人的站。
+- **证书由反代 / CDN 负责。** 应用只做 host→tenant 映射与 CORS 放行，不签发证书、不修改 DNS（只给出要加的 TXT 记录）。
+- **跨域**：CORS 放行「平台主机 + 已生效的租户域名」，60 秒缓存，绑定/解绑时立即失效重建；库不可用时保持旧集合（不放行未知域名）。
+- **登录态按域名隔离。** refresh cookie 不设 `Domain`（host-only），且 `/auth/refresh` 校验 token 里的租户与请求 Host 一致，不一致返回 401 且 **不消耗** 该 token。
+- **`dns` 校验器需要 `dnspython`**；没装时 verify 返回 503 —— 故意不判成「验证失败」，免得把工程配置问题甩锅给客户。

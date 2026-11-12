@@ -283,12 +283,12 @@ async def _memberships_db(context: AuthContext) -> list[dict]:
 async def refresh(
     db: AsyncSession, refresh_token: str, expected_tenant_id: int | None = None
 ) -> dict:
-    '''用 refresh token 换新的 access token。
+    """用 refresh token 换新的 access token。
 
     expected_tenant_id：当前请求 Host 解析出的租户（解析不出来时为 None）。
     两者不一致一律 401 —— 否则 A 站拿到的 refresh cookie 被搬到 B 站域下就能续出
     B 站的会话。提示语刻意与「过期」相同，不告诉对方被拒绝的真实原因。
-    '''
+    """
     try:
         raw = await redis_client.get(f"refresh:{refresh_token}")
     except Exception as exc:

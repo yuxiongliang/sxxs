@@ -193,7 +193,7 @@ async def verify_domain(db: AsyncSession, domain: TenantDomain) -> TenantDomain:
     if isinstance(verifier, domain_verifier.NullVerifier):
         # 没有校验器就不判定：直接标 failed 会让人以为是客户配错了，
         # 实际是我们这边没开校验。
-        raise VerifierUnavailableError('未配置域名校验器（DOMAIN_VERIFY_PROVIDER）')
+        raise VerifierUnavailableError("未配置域名校验器（DOMAIN_VERIFY_PROVIDER）")
 
     expected = verification_value(domain.verify_token or "")
     records = await verifier.txt_records(verification_record_name(domain.host))

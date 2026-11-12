@@ -8,6 +8,7 @@ from app.models.role import Role
 from app.models.setting import SystemSetting
 from app.models.tenant import Tenant, TenantMember
 from app.models.user import User
+from app.services import tenant_domains
 from app.services.setting import DEFAULT_SETTINGS
 
 
@@ -61,6 +62,10 @@ async def create_tenant(
                 config=default["config"],
             )
         )
+
+    # 配了基域才建 <slug>.<基域>：基域为空时是 no-op，不替租户猜一个域名
+    await tenant_domains.ensure_tenant_subdomain(db, tenant)
+
     await db.commit()
     await db.refresh(tenant)
     return tenant

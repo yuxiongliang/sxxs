@@ -14,6 +14,7 @@ from app.models.role import Role
 from app.models.setting import SystemSetting
 from app.models.tenant import Tenant, TenantMember
 from app.models.user import User
+from app.services import tenant_domains
 from app.services.setting import DEFAULT_SETTINGS
 
 
@@ -86,6 +87,9 @@ async def create_tenant(name: str, slug: str, email: str, nickname: str, passwor
                         config=default["config"],
                     )
                 )
+
+        # 与 platform.create_tenant 保持一致：配了基域才建子域
+        await tenant_domains.ensure_tenant_subdomain(db, tenant)
 
         await db.commit()
         print(f"tenant created: id={tenant.id} slug={tenant.slug}")

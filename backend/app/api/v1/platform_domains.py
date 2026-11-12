@@ -20,7 +20,7 @@ from app.models.tenant import Tenant, TenantDomain
 from app.schemas.platform import TenantDomainCreate
 from app.services import tenant_domains
 
-router = APIRouter(prefix='/platform/tenants', tags=['平台域名'])
+router = APIRouter(prefix="/platform/tenants", tags=["平台域名"])
 
 
 def _status_for(exc: tenant_domains.TenantDomainError) -> int:
@@ -56,14 +56,14 @@ def _payload(domain: TenantDomain) -> dict:
 async def _tenant_or_404(db: AsyncSession, tenant_id: int) -> Tenant:
     tenant = (await db.scalars(select(Tenant).where(Tenant.id == tenant_id))).first()
     if tenant is None:
-        raise HTTPException(status_code=404, detail='租户不存在')
+        raise HTTPException(status_code=404, detail="租户不存在")
     return tenant
 
 
-@router.get('/{tenant_id}/domains')
+@router.get("/{tenant_id}/domains")
 async def list_tenant_domains(
     tenant_id: int,
-    _context=Depends(require_platform_permission('platform:tenant:read')),
+    _context=Depends(require_platform_permission("platform:tenant:read")),
     db: AsyncSession = Depends(get_db),
 ):
     tenant = await _tenant_or_404(db, tenant_id)
@@ -71,11 +71,11 @@ async def list_tenant_domains(
     return ok([_payload(domain) for domain in domains])
 
 
-@router.post('/{tenant_id}/domains')
+@router.post("/{tenant_id}/domains")
 async def create_tenant_domain(
     tenant_id: int,
     payload: TenantDomainCreate,
-    _context=Depends(require_platform_permission('platform:tenant:manage')),
+    _context=Depends(require_platform_permission("platform:tenant:manage")),
     db: AsyncSession = Depends(get_db),
 ):
     tenant = await _tenant_or_404(db, tenant_id)
@@ -86,14 +86,14 @@ async def create_tenant_domain(
     await db.commit()
     await db.refresh(domain)
     invalidate_host_cache()
-    return ok(_payload(domain), '域名已绑定')
+    return ok(_payload(domain), "域名已绑定")
 
 
-@router.post('/{tenant_id}/domains/{domain_id}/verify')
+@router.post("/{tenant_id}/domains/{domain_id}/verify")
 async def verify_tenant_domain(
     tenant_id: int,
     domain_id: int,
-    _context=Depends(require_platform_permission('platform:tenant:manage')),
+    _context=Depends(require_platform_permission("platform:tenant:manage")),
     db: AsyncSession = Depends(get_db),
 ):
     await _tenant_or_404(db, tenant_id)
@@ -110,11 +110,11 @@ async def verify_tenant_domain(
     return ok(_payload(domain))
 
 
-@router.delete('/{tenant_id}/domains/{domain_id}')
+@router.delete("/{tenant_id}/domains/{domain_id}")
 async def delete_tenant_domain(
     tenant_id: int,
     domain_id: int,
-    _context=Depends(require_platform_permission('platform:tenant:manage')),
+    _context=Depends(require_platform_permission("platform:tenant:manage")),
     db: AsyncSession = Depends(get_db),
 ):
     try:
@@ -123,4 +123,4 @@ async def delete_tenant_domain(
         raise HTTPException(status_code=_status_for(exc), detail=str(exc)) from exc
     await db.commit()
     invalidate_host_cache()
-    return ok(None, '域名已解绑')
+    return ok(None, "域名已解绑")

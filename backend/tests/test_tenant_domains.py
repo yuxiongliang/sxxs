@@ -69,6 +69,12 @@ def test_normalize_host_strips_port_path_case_and_trailing_dot():
     assert normalize_host(None) == ""
 
 
+def test_dns_provider_is_selectable(monkeypatch):
+    """线上把 DOMAIN_VERIFY_PROVIDER 设成 dns 就该拿到真实解析器。"""
+    monkeypatch.setattr(settings, "domain_verify_provider", "dns")
+    assert isinstance(domain_verifier.get_verifier(), domain_verifier.DnsVerifier)
+
+
 def test_normalize_host_punycodes_idn():
     assert normalize_host("例え.jp") == "xn--r8jz45g.jp"
 
@@ -165,9 +171,7 @@ async def test_subdomain_comes_from_base_domain_and_is_active(db_session, demo_t
         )
 
 
-async def test_refresh_cookie_cannot_be_replayed_on_another_tenant_host(
-    client, db_session
-):
+async def test_refresh_cookie_cannot_be_replayed_on_another_tenant_host(client, db_session):
     """A 站拿到的 refresh token 搬到 B 站域名下必须拒绝，且不消耗这个 token。"""
     login = await client.post(
         "/api/v1/auth/login", json={"username": "admin", "password": "ant.design"}
