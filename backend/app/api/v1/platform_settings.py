@@ -10,6 +10,7 @@ from app.models.setting import SystemSetting
 from app.models.tenant import Tenant
 from app.schemas.common import ApiResponse
 from app.schemas.setting import PlatformSettingUpdate, SettingOut
+from app.services import audit as audit_service
 from app.services import platform_setting as platform_setting_service
 from app.services.platform_auth import PlatformContext
 
@@ -61,11 +62,22 @@ async def get_platform_setting(
 async def save_platform_setting(
     category: str,
     payload: PlatformSettingUpdate,
+    context: PlatformContext = Depends(get_platform_context),
     db: AsyncSession = Depends(get_db),
 ):
     row = await platform_setting_service.save_platform_setting(
         db, category, payload, policy_locked=payload.policy_locked
     )
+    # 平台改全站配置必须落审计：影响所有跟随系统的租户
+    await audit_service.record_platform(
+        db,
+        actor_id=context.user.id,
+        action="platform.setting.update",
+        target_type="platform_setting",
+        target_id=category,
+        after={"enabled": payload.enabled, "policy_locked": payload.policy_locked},
+    )
+    await db.commit()
     return ok(SettingOut.model_validate(row), "平台配置已保存")
 
 

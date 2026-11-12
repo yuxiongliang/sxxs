@@ -14,6 +14,7 @@ from app.api.v1 import (
     media,
     notifications,
     platform,
+    platform_audit,
     platform_auth,
     platform_moderation,
     platform_notification_templates,
@@ -40,6 +41,7 @@ api_router.include_router(audit.router)
 api_router.include_router(portal_shopping.router)
 api_router.include_router(im.router)
 api_router.include_router(seller.router)
+api_router.include_router(platform_audit.router)
 api_router.include_router(platform_auth.router)
 api_router.include_router(platform.router)
 api_router.include_router(platform_settings.router)

@@ -146,3 +146,43 @@ async def distinct_actions(db: AsyncSession, context: AuthContext) -> list[str]:
     if not is_platform_viewer(context):
         stmt = stmt.where(AuditLog.tenant_id == context.tenant.id)
     return sorted(row for row in (await db.scalars(stmt)).all() if row)
+
+
+async def record_platform(
+    db: AsyncSession,
+    *,
+    actor_id: int | None,
+    action: str,
+    target_type: str = "",
+    target_id: str = "",
+    before: dict | None = None,
+    after: dict | None = None,
+) -> None:
+    """记录一条平台级审计。
+
+    用 `tenant_id IS NULL` 表示平台操作 —— 这样不需要新增列，
+    而租户侧查询永远带 tenant_id 过滤，天然看不到平台行。
+    """
+    db.add(
+        AuditLog(
+            tenant_id=None,
+            actor_id=actor_id,
+            action=action,
+            target_type=target_type,
+            target_id=str(target_id),
+            before=before,
+            after=after,
+        )
+    )
+    await db.flush()
+
+
+async def list_platform_logs(
+    db: AsyncSession, current: int = 1, page_size: int = 20
+) -> tuple[list[AuditLog], int]:
+    """平台审计：只看 tenant_id 为空的行。"""
+    stmt = select(AuditLog).where(AuditLog.tenant_id.is_(None))
+    count_stmt = select(func.count(AuditLog.id)).where(AuditLog.tenant_id.is_(None))
+    total = int(await db.scalar(count_stmt) or 0)
+    stmt = stmt.order_by(AuditLog.id.desc()).offset((current - 1) * page_size).limit(page_size)
+    return list((await db.scalars(stmt)).all()), total
