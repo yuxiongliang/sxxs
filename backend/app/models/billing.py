@@ -30,6 +30,9 @@ class Plan(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(String(255), default="")
     price_cents: Mapped[int] = mapped_column(Integer, default=0)
     period: Mapped[str] = mapped_column(String(16), default="monthly")
+    # 周期套餐的时长（月）：填了它就用「月数 × 30 天」算订阅窗口；
+    # lifetime / custom 不用这个字段（一个永久、一个用档期）。
+    duration_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 仅 period=custom 时有值：套餐的固定档期（管理员在平台端填）
     starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

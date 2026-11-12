@@ -47,6 +47,8 @@ export interface PlanRecord {
   description: string;
   price_cents: number;
   period: string;
+  /** 周期套餐的时长（月）；lifetime/custom 为 null */
+  duration_months?: number | null;
   trial_days: number;
   quotas?: Record<string, number | null> | null;
   features?: string[] | null;
@@ -129,10 +131,26 @@ export const createPlan = (data: {
   name: string;
   price_cents: number;
   period?: string;
+  duration_months?: number | null;
   trial_days?: number;
   quotas?: Record<string, number | null>;
   features?: string[];
 }) => apiPost<PlanRecord>('/platform/plans', data);
+
+/** 编辑套餐：名称 / 价格 / 时长（月）/ 上下架；period、code 不允许改。 */
+export const updatePlan = (
+  id: number,
+  data: {
+    name?: string;
+    price_cents?: number;
+    duration_months?: number | null;
+    status?: 'active' | 'archived';
+  },
+) => apiPut<PlanRecord>(`/platform/plans/${id}`, data);
+
+/** 删除套餐：被租户订阅引用时后端返回 409，需改为下架。 */
+export const deletePlan = (id: number) =>
+  apiDelete<{ id: number }>(`/platform/plans/${id}`);
 
 export const subscribeTenant = (tenantId: number, planId: number) =>
   apiPost<SubscriptionRecord>(`/platform/tenants/${tenantId}/subscription`, {

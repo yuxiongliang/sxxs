@@ -106,7 +106,10 @@ def _term_window(plan: Plan, now: datetime, trial_days: int) -> tuple[datetime, 
         if plan.starts_at is None or plan.ends_at is None:
             raise HTTPException(status_code=400, detail="自定义档期套餐缺少开始或到期时间")
         return plan.starts_at, plan.ends_at
-    days = trial_days or PERIOD_DAYS.get(plan.period, 30)
+    # 管理员填了「时长（月）」就按 N × 30 天算；否则退回 period 的默认天数
+    days = trial_days or (
+        plan.duration_months * 30 if plan.duration_months else PERIOD_DAYS.get(plan.period, 30)
+    )
     return now, now + timedelta(days=days)
 
 
@@ -187,9 +190,7 @@ async def renew_subscription(
 
     if plan.period in NON_RECURRING_PERIODS:
         # 买断/档期套餐没有「下一个账期」，续费会凭空造一笔不该收的账单
-        raise HTTPException(
-            status_code=400, detail="该套餐是永久买断或自定义档期，不按周期续费"
-        )
+        raise HTTPException(status_code=400, detail="该套餐是永久买断或自定义档期，不按周期续费")
 
     now = datetime.now(UTC)
     period_days = days or PERIOD_DAYS.get(plan.period, 30)

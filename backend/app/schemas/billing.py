@@ -3,8 +3,8 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # 非周期套餐：永久买断 / 管理员自定义档期；这两类一律不许试用
-NON_RECURRING_PERIODS = frozenset({'lifetime', 'custom'})
-PERIOD_PATTERN = '^(monthly|yearly|lifetime|custom)$'
+NON_RECURRING_PERIODS = frozenset({"lifetime", "custom"})
+PERIOD_PATTERN = "^(monthly|yearly|lifetime|custom)$"
 
 
 class PlanCreate(BaseModel):
@@ -13,6 +13,7 @@ class PlanCreate(BaseModel):
     description: str = Field(default="", max_length=255)
     price_cents: int = Field(default=0, ge=0)
     period: str = Field(default="monthly", pattern=PERIOD_PATTERN)
+    duration_months: int | None = Field(default=None, ge=1, le=120)
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     trial_days: int = Field(default=14, ge=0, le=365)
@@ -38,6 +39,7 @@ class PlanUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=255)
     price_cents: int | None = Field(default=None, ge=0)
     period: str | None = Field(default=None, pattern=PERIOD_PATTERN)
+    duration_months: int | None = Field(default=None, ge=1, le=120)
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     trial_days: int | None = Field(default=None, ge=0, le=365)
@@ -56,6 +58,7 @@ class PlanOut(BaseModel):
     description: str
     price_cents: int
     period: str
+    duration_months: int | None = None
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     trial_days: int

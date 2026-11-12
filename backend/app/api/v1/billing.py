@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_context, get_db, require_platform_permission
 from app.core.response import ok
-from app.models.billing import Plan
+from app.models.billing import Plan, TenantSubscription
 from app.models.service_category import ServiceCategory
 from app.models.tenant import Tenant
 from app.schemas.billing import (
@@ -70,6 +70,7 @@ async def create_plan(
         description=payload.description,
         price_cents=payload.price_cents,
         period=payload.period,
+        duration_months=payload.duration_months,
         starts_at=payload.starts_at,
         ends_at=payload.ends_at,
         trial_days=payload.trial_days,
@@ -104,6 +105,31 @@ async def update_plan(
 # --------------------------------------------------------------------------- #
 # Subscriptions
 # --------------------------------------------------------------------------- #
+
+
+@router.delete("/plans/{plan_id}", response_model=ApiResponse[dict])
+async def delete_plan(
+    plan_id: int,
+    _context=Depends(require_platform_permission(MANAGE)),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除套餐。仅当没有任何租户订阅它时才允许 —— 否则改「下架」。"""
+    plan = await db.get(Plan, plan_id)
+    if plan is None:
+        raise HTTPException(status_code=404, detail="套餐不存在")
+    in_use = (
+        await db.scalars(
+            select(TenantSubscription.id).where(TenantSubscription.plan_id == plan_id)
+        )
+    ).first()
+    if in_use is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="该套餐还有租户在使用，不能删除；请改为「下架」",
+        )
+    await db.delete(plan)
+    await db.commit()
+    return ok({"id": plan_id}, "套餐已删除")
 
 
 @router.get("/tenants/{tenant_id}/subscription", response_model=ApiResponse[dict])

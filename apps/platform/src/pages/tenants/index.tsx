@@ -12,7 +12,6 @@ import {
   Input,
   Modal,
   Popconfirm,
-  Progress,
   Select,
   Space,
   Table,
@@ -218,30 +217,7 @@ const PlatformTenantsPage: React.FC = () => {
         </Space>
       ),
     },
-    {
-      title: '用量 / 配额',
-      key: 'usage',
-      width: 170,
-      render: (_, record) => {
-        const used = record.used?.products ?? 0;
-        const limit = record.quotas?.products;
-        if (limit === null || limit === undefined) {
-          return <Tag color="green">商品不限（已用 {used}）</Tag>;
-        }
-        const percent =
-          limit === 0 ? 100 : Math.min(100, Math.round((used / limit) * 100));
-        return (
-          <Progress
-            percent={percent}
-            size="small"
-            status={
-              record.exceeded?.includes('products') ? 'exception' : 'normal'
-            }
-            format={() => `${used}/${limit}`}
-          />
-        );
-      },
-    },
+
     {
       title: '类目 / 抽佣',
       key: 'service_category',
