@@ -12,6 +12,12 @@ export default [
     component: './tenants',
   },
   {
+    path: '/notifications',
+    name: 'notifications',
+    icon: 'NotificationOutlined',
+    component: './notifications',
+  },
+  {
     path: '/services',
     name: 'services',
     icon: 'SettingOutlined',

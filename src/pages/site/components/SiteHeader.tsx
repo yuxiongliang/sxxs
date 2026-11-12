@@ -16,7 +16,7 @@ import {
   useModel,
 } from '@umijs/max';
 import { Button, Dropdown } from 'antd';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { logout as authLogout } from '@/services/auth/api';
 import type { ThemeMode } from '@/theme';
 import { useAppTheme } from '@/theme';
@@ -207,16 +207,53 @@ export default function SiteHeader({
     window.location.assign(item.href);
   };
 
+  // 站点品牌：匿名公开接口。
+  // B6（自定义域名）上线后这里要改成按 Host 解析租户；当前站点只服务 demo 租户。
+  const [brand, setBrand] = useState<{
+    display_name: string;
+    logo_url?: string | null;
+  }>();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/v1/public/brand?tenant=demo')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (!cancelled && body?.data) setBrand(body.data);
+      })
+      .catch(() => {
+        /* 品牌取不到就用默认文案，不能影响站点可用性 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (brand?.display_name) {
+      document.title = brand.display_name;
+    }
+  }, [brand?.display_name]);
+
   return (
     <header className={styles.header}>
       <div className={styles.container}>
         <div className={styles.headerInner}>
           <a className={styles.brand} href="/">
-            <ShopOutlined style={{ color: 'var(--ant-color-primary)' }} />
-            {formatMessage({
-              id: 'site.hero.title',
-              defaultMessage: '赛霄玄思',
-            })}
+            {brand?.logo_url ? (
+              <img
+                src={brand.logo_url}
+                alt={brand.display_name}
+                style={{ height: 26, objectFit: 'contain' }}
+              />
+            ) : (
+              <ShopOutlined style={{ color: 'var(--ant-color-primary)' }} />
+            )}
+            {brand?.display_name ??
+              formatMessage({
+                id: 'site.hero.title',
+                defaultMessage: '赛霄玄思',
+              })}
           </a>
 
           <nav className={styles.nav}>

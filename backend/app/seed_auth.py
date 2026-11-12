@@ -79,6 +79,7 @@ PERMISSIONS = [
     ("platform:setting:read", "查看平台配置", "platform", "setting_read"),
     ("platform:setting:manage", "管理平台配置", "platform", "setting_manage"),
     ("platform:audit:read", "查看跨租户审计", "platform", "audit_read"),
+    ("platform:notification:manage", "管理通知模板", "platform", "notification_manage"),
     ("platform:attachment:view", "查看全站附件", "platform", "attachment_view"),
     ("platform:attachment:review", "审核附件内容", "platform", "attachment_review"),
     ("platform:attachment:takedown", "强制下架附件", "platform", "attachment_takedown"),

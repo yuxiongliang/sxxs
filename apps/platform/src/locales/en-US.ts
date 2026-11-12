@@ -1,9 +1,11 @@
 export default {
+  notifications: 'Notifications',
   tenants: 'Tenants & Billing',
   moderation: 'Content Review',
   services: 'Service Config',
   settings: 'Platform Settings',
   login: 'Sign in',
+  'menu.notifications': 'Notifications',
   'menu.tenants': 'Tenants & Billing',
   'menu.moderation': 'Content Review',
   'menu.services': 'Service Config',

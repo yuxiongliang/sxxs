@@ -10,6 +10,7 @@ from app.schemas.notification import (
     NotificationStats,
 )
 from app.services import notification as notification_service
+from app.services import notification_template as template_service
 from app.services.auth import AuthContext
 
 router = APIRouter(prefix="/notifications", tags=["触达通知"])
@@ -76,3 +77,28 @@ async def retry_notification(
 ):
     record = await notification_service.retry_notification(db, notification_id, context.tenant.id)
     return ok(NotificationOut.model_validate(record), "通知已重试")
+
+
+@router.get("/templates", response_model=ApiResponse[list[dict]])
+async def list_available_templates(
+    db: AsyncSession = Depends(get_db),
+):
+    """租户端只读：平台已启用的租户类模板。
+
+    租户端不再提供「自己写模板并发通知」的能力（发送按钮已隐藏），
+    这里只用于展示「有哪些通知会发给买家」。
+    """
+    rows = await template_service.list_templates(db, scope="tenant", only_enabled=True)
+    return ok(
+        [
+            {
+                "code": row.code,
+                "name": row.name,
+                "channel": row.channel,
+                "subject": row.subject,
+                "variables": row.variables,
+                "mandatory": row.mandatory,
+            }
+            for row in rows
+        ]
+    )

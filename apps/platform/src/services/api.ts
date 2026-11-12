@@ -299,3 +299,44 @@ export const moderationLogs = (id: number) =>
 /** 审核预览/下载：需要带平台 token，给 fetch 用，不能直接塞进 <img src>。 */
 export const moderationDownloadUrl = (id: number) =>
   `/api/v1/platform/moderation/${id}/download`;
+
+// ---------------------------------------------------------------------------
+// 通知模板（scope 区分品牌归属：platform→租户 / tenant→买家）
+// ---------------------------------------------------------------------------
+
+export interface NotificationTemplateRecord {
+  id: number;
+  scope: 'platform' | 'tenant';
+  code: string;
+  name: string;
+  channel: string;
+  subject: string;
+  body: string;
+  variables: string[];
+  enabled: boolean;
+  mandatory: boolean;
+  version: number;
+  updated_at: string;
+}
+
+export const listNotificationTemplates = (scope?: 'platform' | 'tenant') =>
+  apiGet<NotificationTemplateRecord[]>(
+    `/platform/notification-templates${scope ? `?scope=${scope}` : ''}`,
+  );
+
+export const saveNotificationTemplate = (
+  scope: string,
+  code: string,
+  payload: {
+    name: string;
+    channel: string;
+    subject: string;
+    body: string;
+    enabled: boolean;
+    mandatory: boolean;
+  },
+) =>
+  apiPut<NotificationTemplateRecord>(
+    `/platform/notification-templates/${scope}/${code}`,
+    payload,
+  );
