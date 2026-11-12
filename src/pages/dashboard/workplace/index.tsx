@@ -277,9 +277,6 @@ export default function WorkplacePage() {
               {access.canAuditRead ? (
                 <Link to="/system/audit">审计日志</Link>
               ) : null}
-              {access.canTenantManage ? (
-                <Link to="/platform/tenants">平台与租户</Link>
-              ) : null}
             </Space>
           </Card>
         </Col>

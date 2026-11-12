@@ -1,13 +1,18 @@
-const TOKEN_KEY = 'antd_pro_access_token';
+import {
+  ACCESS_TOKEN_KEY,
+  createTokenStorage,
+} from '../../packages/shared/src/auth/token';
+
+const storage = createTokenStorage(ACCESS_TOKEN_KEY);
 
 export function getAccessToken(): string | null {
-  return sessionStorage.getItem(TOKEN_KEY);
+  return storage.get();
 }
 
 export function setAccessToken(token: string) {
-  sessionStorage.setItem(TOKEN_KEY, token);
+  storage.set(token);
 }
 
 export function clearAccessToken() {
-  sessionStorage.removeItem(TOKEN_KEY);
+  storage.clear();
 }

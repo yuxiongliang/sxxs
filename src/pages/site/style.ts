@@ -44,6 +44,11 @@ export default createStyles(({ token, css }) => ({
     gap: 4px;
   `,
   navButton: css`
+    // inline-flex + 居中：<a> 与 <button> 混用时，默认基线对齐会让锚点文字偏上，
+    // 用 flex 居中才能让「文档」这类链接按钮和其余按钮严格对齐。
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     height: 34px;
     padding: 0 12px;
     border-radius: ${token.borderRadius}px;
@@ -51,6 +56,8 @@ export default createStyles(({ token, css }) => ({
     background: transparent;
     color: ${token.colorTextSecondary};
     font-size: 14px;
+    line-height: 1;
+    text-decoration: none;
     cursor: pointer;
     transition: all 0.15s ease;
     &:hover {
@@ -358,5 +365,47 @@ export default createStyles(({ token, css }) => ({
       transform: none;
       animation: none;
     }
+  `,
+  // 账号胶囊按钮：头像圆点 + 昵称 + 下拉箭头
+  accountBtn: css`
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 10px 0 4px;
+    border-radius: 999px;
+    border: 1px solid ${token.colorBorderSecondary};
+    background: ${token.colorFillQuaternary};
+    color: ${token.colorText};
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    &:hover {
+      border-color: ${token.colorPrimaryBorder};
+      background: ${token.colorPrimaryBg};
+    }
+  `,
+  accountAvatar: css`
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: ${token.colorPrimary};
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    flex: none;
+  `,
+  accountName: css`
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  `,
+  accountArrow: css`
+    font-size: 10px;
+    opacity: 0.55;
   `,
 }));

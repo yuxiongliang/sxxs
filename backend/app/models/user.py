@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -24,4 +24,9 @@ class User(Base, TimestampMixin):
     birthday: Mapped[date | None] = mapped_column(Date, nullable=True)
     gender: Mapped[str | None] = mapped_column(String(16), nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # 平台账号标识：与租户身份完全解耦。平台账号不需要任何 TenantMember 记录，
+    # 登录后只拿 aud=platform 的 token，无法调用租户业务接口。
+    is_platform_admin: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", index=True
+    )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

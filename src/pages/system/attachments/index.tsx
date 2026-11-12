@@ -37,6 +37,7 @@ import React, { useMemo, useState } from 'react';
 import AttachmentUpload from '@/components/AttachmentUpload';
 import {
   deleteAttachment,
+  restoreAttachment,
   getAttachmentStats,
   listAttachments,
 } from '@/services/system/api';
@@ -73,6 +74,28 @@ const categoryColor = (category: string) => {
   return 'default';
 };
 
+const REVIEW_LABEL: Record<string, string> = {
+  pending: '审核中',
+  approved: '已通过',
+  rejected: '未通过',
+  manual: '待人工',
+  failed: '审核异常',
+};
+
+const REVIEW_COLOR: Record<string, string> = {
+  pending: 'gold',
+  approved: 'green',
+  rejected: 'red',
+  manual: 'blue',
+  failed: 'volcano',
+};
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: '管理员',
+  seller: '卖家',
+  buyer: '买家',
+};
+
 const AttachmentManagement: React.FC = () => {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
@@ -83,11 +106,31 @@ const AttachmentManagement: React.FC = () => {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [sourceModule, setSourceModule] = useState('manual');
+  const [sourceRole, setSourceRole] = useState<string>();
+  const [reviewStatus, setReviewStatus] = useState<string>();
+  const [recycle, setRecycle] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['attachments', page, pageSize, category, keyword],
+    queryKey: [
+      'attachments',
+      page,
+      pageSize,
+      category,
+      keyword,
+      sourceRole,
+      reviewStatus,
+      recycle,
+    ],
     queryFn: () =>
-      listAttachments({ current: page, pageSize, category, keyword }),
+      listAttachments({
+        current: page,
+        pageSize,
+        category,
+        keyword,
+        source_role: sourceRole,
+        review_status: reviewStatus,
+        recycle,
+      }),
   });
   const { data: stats } = useQuery({
     queryKey: ['attachment-stats'],
@@ -102,10 +145,20 @@ const AttachmentManagement: React.FC = () => {
   const handleDelete = async (record: AttachmentRecord) => {
     try {
       await deleteAttachment(record.id);
-      message.success('附件已删除');
+      message.success('已移入回收站');
       refresh();
     } catch (error: any) {
       message.error(error?.message || '删除失败');
+    }
+  };
+
+  const handleRestore = async (record: AttachmentRecord) => {
+    try {
+      await restoreAttachment(record.id);
+      message.success('附件已恢复');
+      refresh();
+    } catch (error: any) {
+      message.error(error?.message || '恢复失败');
     }
   };
 
@@ -154,6 +207,33 @@ const AttachmentManagement: React.FC = () => {
         render: (value: number) => formatBytes(value),
       },
       { title: '来源模块', dataIndex: 'source_module', width: 120 },
+      {
+        title: '来源',
+        dataIndex: 'uploader_role',
+        width: 90,
+        render: (value: string) => (
+          <Tag color={value === 'seller' ? 'purple' : value === 'buyer' ? 'blue' : 'default'}>
+            {ROLE_LABEL[value] ?? value}
+          </Tag>
+        ),
+      },
+      {
+        title: '审核',
+        dataIndex: 'review_status',
+        width: 120,
+        render: (value: string, record) => (
+          <Space direction="vertical" size={0}>
+            <Tag color={REVIEW_COLOR[value] ?? 'default'}>
+              {REVIEW_LABEL[value] ?? value}
+            </Tag>
+            {record.reject_reason ? (
+              <span style={{ color: '#cf1322', fontSize: 12 }}>
+                {record.reject_reason}
+              </span>
+            ) : null}
+          </Space>
+        ),
+      },
       { title: '上传人', dataIndex: 'uploader', width: 100 },
       {
         title: '上传时间',
@@ -176,7 +256,7 @@ const AttachmentManagement: React.FC = () => {
               />
             </Tooltip>
             <Popconfirm
-              title="确定删除该附件？"
+              title="移入回收站后仍可恢复，确定？"
               onConfirm={() => handleDelete(record)}
             >
               <Button
@@ -186,11 +266,20 @@ const AttachmentManagement: React.FC = () => {
                 icon={<DeleteOutlined />}
               />
             </Popconfirm>
+            {recycle ? (
+              <Button
+                type="link"
+                size="small"
+                onClick={() => handleRestore(record)}
+              >
+                恢复
+              </Button>
+            ) : null}
           </Space>
         ),
       },
     ],
-    [],
+    [recycle],
   );
 
   const renderCard = (record: AttachmentRecord) => {
@@ -396,6 +485,45 @@ const AttachmentManagement: React.FC = () => {
                 setPage(1);
               }}
             />
+            <Select
+              allowClear
+              placeholder="上传者"
+              style={{ width: 120 }}
+              options={[
+                { value: 'admin', label: '管理员' },
+                { value: 'seller', label: '卖家' },
+                { value: 'buyer', label: '买家' },
+              ]}
+              onChange={(value) => {
+                setSourceRole(value);
+                setPage(1);
+              }}
+            />
+            <Select
+              allowClear
+              placeholder="审核状态"
+              style={{ width: 130 }}
+              options={[
+                { value: 'pending', label: '审核中' },
+                { value: 'approved', label: '已通过' },
+                { value: 'rejected', label: '未通过' },
+                { value: 'manual', label: '待人工' },
+                { value: 'failed', label: '审核异常' },
+              ]}
+              onChange={(value) => {
+                setReviewStatus(value);
+                setPage(1);
+              }}
+            />
+            <Button
+              type={recycle ? 'primary' : 'default'}
+              onClick={() => {
+                setRecycle(!recycle);
+                setPage(1);
+              }}
+            >
+              回收站
+            </Button>
           </Space>
           <Segmented
             value={view}

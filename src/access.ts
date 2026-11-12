@@ -44,10 +44,6 @@ export default function access(
     canRoleManage: permissions.has('role:manage'),
     // Platform-scoped: never granted to a tenant role. Mirrors the backend
     // `platform:tenant:read` / `platform:tenant:manage` permission codes.
-    canTenantRead:
-      roles.has('platform_admin') || permissions.has('platform:tenant:read'),
-    canTenantManage:
-      roles.has('platform_admin') || permissions.has('platform:tenant:manage'),
     canAuditRead: permissions.has('audit:read'),
     canPayoutRead,
     canPayoutManage: permissions.has('payout:manage'),
@@ -69,6 +65,7 @@ export default function access(
     canStorageSetting: permissions.has('setting:storage'),
     canAmapSetting: permissions.has('setting:amap'),
     canAmapRead: permissions.has('amap:read'),
+    canBrandManage: permissions.has('tenant:brand:manage'),
     // Plan feature gates: a module needs BOTH the permission above and the
     // feature key sold in the tenant's plan. Routes use these; the raw
     // permission flags stay for older call sites.

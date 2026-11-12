@@ -463,11 +463,11 @@ async def test_batch_rejects_inverted_period(client, admin_token):
     assert response.status_code == 400
 
 
-async def test_settlement_batches_are_tenant_scoped(client, admin_token):
+async def test_settlement_batches_are_tenant_scoped(client, admin_token, platform_token):
     """A second tenant must not see the demo tenant's batches."""
     await client.post(
         "/api/v1/platform/tenants",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={
             "name": "Batch Other Tenant",
             "slug": "batch-other",
@@ -488,10 +488,10 @@ async def test_settlement_batches_are_tenant_scoped(client, admin_token):
     assert response.json()["data"] == []
 
 
-async def test_commission_rule_rows_are_tenant_scoped(client, admin_token, db_session):
+async def test_commission_rule_rows_are_tenant_scoped(client, admin_token, db_session, platform_token):
     await client.post(
         "/api/v1/platform/tenants",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={
             "name": "Rule Other Tenant",
             "slug": "rule-other",

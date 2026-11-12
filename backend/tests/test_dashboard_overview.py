@@ -192,10 +192,10 @@ async def test_usage_block_reflects_the_plan(client, admin_token):
     assert usage["days_left"] is not None
 
 
-async def test_overview_is_tenant_scoped(client, admin_token):
+async def test_overview_is_tenant_scoped(client, admin_token, platform_token):
     created = await client.post(
         "/api/v1/platform/tenants",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={
             "name": "Dashboard Other Tenant",
             "slug": "dash-other",

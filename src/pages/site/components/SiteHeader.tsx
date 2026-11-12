@@ -2,20 +2,26 @@ import {
   BulbFilled,
   BulbOutlined,
   DesktopOutlined,
+  DownOutlined,
   GlobalOutlined,
+  LogoutOutlined,
   ShopOutlined,
 } from '@ant-design/icons';
 import {
   getAllLocales,
   getLocale,
   setLocale,
+  useAccess,
   useIntl,
   useModel,
 } from '@umijs/max';
 import { Button, Dropdown } from 'antd';
 import { useEffect, useMemo } from 'react';
+import { logout as authLogout } from '@/services/auth/api';
 import type { ThemeMode } from '@/theme';
 import { useAppTheme } from '@/theme';
+import { clearAccessToken } from '@/utils/authToken';
+import { visibleEntrances } from '../entrances';
 import type { SearchEntry } from '../search';
 import useStyles from '../style';
 import GlobalSearch from './GlobalSearch';
@@ -31,11 +37,35 @@ const LOCALE_LABEL: Record<string, string> = {
   'bn-BD': 'বাংলা',
 };
 
-/** 顶部导航按钮：全部为页内锚点，点击平滑滚动 */
-const NAV_ANCHORS = [
-  { id: 'site.nav.features', href: '#features' },
-  { id: 'site.nav.modules', href: '#modules' },
-  { id: 'site.nav.quickstart', href: '#quickstart' },
+/** 顶部导航项：页内跳转用 onClick，站内跳转用 href */
+export interface SiteNavItem {
+  key: string;
+  labelId: string;
+  defaultLabel: string;
+  href?: string;
+  onClick?: () => void;
+}
+
+/** 旧落地页（营销页）的默认导航 */
+const MARKETING_NAV: SiteNavItem[] = [
+  {
+    key: 'features',
+    labelId: 'site.nav.features',
+    defaultLabel: '平台能力',
+    href: '#features',
+  },
+  {
+    key: 'modules',
+    labelId: 'site.nav.modules',
+    defaultLabel: '功能模块',
+    href: '#modules',
+  },
+  {
+    key: 'quickstart',
+    labelId: 'site.nav.quickstart',
+    defaultLabel: '快速开始',
+    href: '#quickstart',
+  },
 ];
 
 const THEME_OPTIONS: Array<{
@@ -64,10 +94,23 @@ const THEME_OPTIONS: Array<{
   },
 ];
 
-export default function SiteHeader({ entries }: { entries: SearchEntry[] }) {
+export default function SiteHeader({
+  entries,
+  nav,
+  activeKey,
+  showAuth = true,
+}: {
+  entries: SearchEntry[];
+  /** 不传则使用营销页默认导航 */
+  nav?: SiteNavItem[];
+  /** 当前高亮的导航项 key */
+  activeKey?: string;
+  /** 是否渲染登录/注册/控制台/账号入口。纯介绍页传 false */
+  showAuth?: boolean;
+}) {
   const { styles } = useStyles();
   const { formatMessage } = useIntl();
-  const { initialState, setInitialState } = useModel('@@initialState');
+  const { initialState, setInitialState, refresh } = useModel('@@initialState');
   const { mode, resolved, setMode } = useAppTheme();
   const signedIn = Boolean(initialState?.currentUser);
 
@@ -81,6 +124,34 @@ export default function SiteHeader({ entries }: { entries: SearchEntry[] }) {
       settings: { ...initialState.settings, navTheme },
     });
   }, [resolved, initialState, setInitialState]);
+
+  // 从别的标签页登录回来后，重新识别一次登录态。
+  // token 在 sessionStorage 里按标签页隔离，但 refresh cookie 是共享的，
+  // 所以这里 re-run getInitialState 会用 cookie 静默换到 token。
+  useEffect(() => {
+    const recheck = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (initialState?.currentUser) return;
+      refresh();
+    };
+    document.addEventListener('visibilitychange', recheck);
+    window.addEventListener('focus', recheck);
+    return () => {
+      document.removeEventListener('visibilitychange', recheck);
+      window.removeEventListener('focus', recheck);
+    };
+  }, [initialState?.currentUser, refresh]);
+
+  const handleLogout = async () => {
+    // 后端失败也要把本地登出做完，否则用户会卡在「看似已登录」的状态里
+    try {
+      await authLogout();
+    } catch {
+      /* 忽略：下面照常清理本地状态 */
+    }
+    clearAccessToken();
+    await refresh();
+  };
 
   const locales = useMemo(() => {
     const current = getLocale();
@@ -107,10 +178,33 @@ export default function SiteHeader({ entries }: { entries: SearchEntry[] }) {
   const activeTheme =
     THEME_OPTIONS.find((option) => option.key === mode) ?? THEME_OPTIONS[2];
 
-  const scrollTo = (href: string) => {
-    document
-      .querySelector(href)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // 悬停「进入控制台」时列出的一级页面：只收当前账号真正有权访问的，
+  // 权限判定复用 src/access.ts，避免菜单里出现「点进去 403」的条目。
+  const access = useAccess();
+  const consoleMenuItems = visibleEntrances(access).map((entry) => ({
+    key: entry.key,
+    label: formatMessage({ id: entry.labelId, defaultMessage: entry.key }),
+    // 同标签页跳转：access token 在本页 sessionStorage 里，
+    // 不会出现「新标签页没 token → 又要登录」的问题。
+    onClick: () => window.location.assign(entry.path),
+  }));
+  const navItems = nav ?? MARKETING_NAV;
+
+  const handleNav = (item: SiteNavItem) => {
+    if (item.onClick) {
+      item.onClick();
+      return;
+    }
+    if (!item.href) return;
+    if (item.href.startsWith('#')) {
+      // 页内锚点：平滑滚动，不刷新页面
+      document
+        .querySelector(item.href)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    // 站内跳转（如「赛霄玄思」去旧落地页）
+    window.location.assign(item.href);
   };
 
   return (
@@ -126,19 +220,21 @@ export default function SiteHeader({ entries }: { entries: SearchEntry[] }) {
           </a>
 
           <nav className={styles.nav}>
-            {NAV_ANCHORS.map((item) => (
+            {navItems.map((item) => (
               <button
-                key={item.id}
+                key={item.key}
                 type="button"
                 className={styles.navButton}
-                onClick={() => scrollTo(item.href)}
+                aria-current={activeKey === item.key ? 'page' : undefined}
+                data-active={activeKey === item.key ? 'true' : undefined}
+                onClick={() => handleNav(item)}
               >
-                {formatMessage({ id: item.id, defaultMessage: item.id })}
+                {formatMessage({
+                  id: item.labelId,
+                  defaultMessage: item.defaultLabel,
+                })}
               </button>
             ))}
-            <a className={styles.navButton} href="/welcome">
-              {formatMessage({ id: 'site.nav.docs', defaultMessage: '文档' })}
-            </a>
           </nav>
 
           <div className={styles.actions}>
@@ -181,29 +277,81 @@ export default function SiteHeader({ entries }: { entries: SearchEntry[] }) {
               />
             </Dropdown>
 
-            {signedIn ? (
-              <Button type="primary" href="/dashboard/analysis">
-                {formatMessage({
-                  id: 'site.nav.console',
-                  defaultMessage: '进入控制台',
-                })}
-              </Button>
-            ) : (
-              <>
-                <Button type="text" href="/user/login">
-                  {formatMessage({
-                    id: 'site.nav.login',
-                    defaultMessage: '登录',
-                  })}
-                </Button>
-                <Button type="primary" href="/user/register">
-                  {formatMessage({
-                    id: 'site.footer.link.register',
-                    defaultMessage: '注册',
-                  })}
-                </Button>
-              </>
-            )}
+            {showAuth ? (
+              signedIn ? (
+                <>
+                  {/* 已登录：悬停「进入控制台」直接列出有权访问的一级页面 */}
+                  <Dropdown
+                    menu={{ items: consoleMenuItems }}
+                    trigger={['hover']}
+                    placement="bottomRight"
+                    disabled={consoleMenuItems.length === 0}
+                  >
+                    <Button type="primary" href="/dashboard/analysis">
+                      {formatMessage({
+                        id: 'site.nav.console',
+                        defaultMessage: '进入控制台',
+                      })}
+                      <DownOutlined style={{ fontSize: 10 }} />
+                    </Button>
+                  </Dropdown>
+
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          key: 'logout',
+                          icon: <LogoutOutlined />,
+                          label: formatMessage({
+                            id: 'site.nav.logout',
+                            defaultMessage: '退出登录',
+                          }),
+                        },
+                      ],
+                      onClick: ({ key }) => {
+                        if (key === 'logout') handleLogout();
+                      },
+                    }}
+                    placement="bottomRight"
+                  >
+                    <button type="button" className={styles.accountBtn}>
+                      <span className={styles.accountAvatar}>
+                        {(initialState?.currentUser?.name ?? '?').slice(0, 1)}
+                      </span>
+                      <span className={styles.accountName}>
+                        {initialState?.currentUser?.name}
+                      </span>
+                      <DownOutlined className={styles.accountArrow} />
+                    </button>
+                  </Dropdown>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="text"
+                    href="/user/login"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {formatMessage({
+                      id: 'site.nav.login',
+                      defaultMessage: '登录',
+                    })}
+                  </Button>
+                  <Button
+                    type="primary"
+                    href="/user/register"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {formatMessage({
+                      id: 'site.footer.link.register',
+                      defaultMessage: '注册',
+                    })}
+                  </Button>
+                </>
+              )
+            ) : null}
           </div>
         </div>
       </div>

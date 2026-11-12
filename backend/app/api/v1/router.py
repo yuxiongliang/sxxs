@@ -11,12 +11,18 @@ from app.api.v1 import (
     departments,
     finance_admin,
     im,
+    media,
     notifications,
     platform,
+    platform_auth,
+    platform_moderation,
+    platform_settings,
     portal_shopping,
+    public,
     roles,
     seller,
     settings,
+    tenant_brand,
     users,
 )
 
@@ -33,9 +39,15 @@ api_router.include_router(audit.router)
 api_router.include_router(portal_shopping.router)
 api_router.include_router(im.router)
 api_router.include_router(seller.router)
+api_router.include_router(platform_auth.router)
 api_router.include_router(platform.router)
+api_router.include_router(platform_settings.router)
+api_router.include_router(platform_moderation.router)
+api_router.include_router(media.router)
+api_router.include_router(public.router)
 api_router.include_router(departments.router)
 api_router.include_router(roles.router)
 api_router.include_router(settings.router)
+api_router.include_router(tenant_brand.router)
 api_router.include_router(attachments.router)
 api_router.include_router(notifications.router)

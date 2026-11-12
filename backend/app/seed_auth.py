@@ -73,8 +73,15 @@ PERMISSIONS = [
     ("cart:manage", "管理购物车", "cart", "manage"),
     ("address:read", "查看收货地址", "address", "read"),
     ("address:manage", "管理收货地址", "address", "manage"),
+    ("tenant:brand:manage", "维护站点品牌", "tenant", "brand_manage"),
     ("platform:tenant:read", "查看平台租户", "platform", "read"),
     ("platform:tenant:manage", "开通/管理平台租户", "platform", "manage"),
+    ("platform:setting:read", "查看平台配置", "platform", "setting_read"),
+    ("platform:setting:manage", "管理平台配置", "platform", "setting_manage"),
+    ("platform:audit:read", "查看跨租户审计", "platform", "audit_read"),
+    ("platform:attachment:view", "查看全站附件", "platform", "attachment_view"),
+    ("platform:attachment:review", "审核附件内容", "platform", "attachment_review"),
+    ("platform:attachment:takedown", "强制下架附件", "platform", "attachment_takedown"),
 ]
 
 ROLE_DEFINITIONS = [
@@ -92,7 +99,9 @@ ROLE_DEFINITIONS = [
 
 ROLE_PERMISSIONS = {
     "admin": [code for code, *_ in PERMISSIONS],
-    "platform_admin": [code for code, *_ in PERMISSIONS],
+    # 平台管理员只持有 platform:* 权限。租户业务权限一个都不给：
+    # 它登录的是独立平台端，拿的是 aud=platform 的 token，本就进不了租户接口。
+    "platform_admin": [code for code, *_ in PERMISSIONS if code.startswith("platform:")],
     "platform_support": [
         "dashboard:read",
         "user:read",
@@ -103,6 +112,7 @@ ROLE_PERMISSIONS = {
         "platform:tenant:read",
     ],
     "tenant_owner": [
+        "tenant:brand:manage",
         "dashboard:read",
         "user:read",
         "user:write",
@@ -309,6 +319,12 @@ async def _prune_forbidden_role_permissions(db: AsyncSession) -> int:
     return removed
 
 
+# 平台管理员账号：不绑定任何租户，只用于「赛霄玄思 SaaS 管理平台」。
+PLATFORM_ADMIN_USERNAME = "root"
+PLATFORM_ADMIN_PASSWORD = "Sxxs@Platform2026"
+PLATFORM_ADMIN_EMAIL = "root@saixiao.local"
+
+
 async def seed_auth_data(db: AsyncSession) -> None:
     tenant = (await db.scalars(select(Tenant).where(Tenant.slug == DEMO_TENANT_SLUG))).first()
     if tenant is None:
@@ -388,6 +404,38 @@ async def seed_auth_data(db: AsyncSession) -> None:
     await _prune_foreign_tenant_owners(db, tenant)
 
     await db.commit()
+
+
+async def seed_platform_admin(db: AsyncSession) -> None:
+    """创建平台管理员账号。
+
+    必须在 demo 用户创建 *之后* 调用：`seed_demo_data()` 用
+    `if user_count == 0` 来判断是否要建 demo 用户，若平台账号先插进去，
+    计数就不为 0，demo 用户会被整块跳过（admin 登录直接 401）。
+
+    平台账号刻意不创建 TenantMember：平台身份与租户身份完全解耦。
+    """
+    platform_user = (
+        await db.scalars(select(User).where(User.username == PLATFORM_ADMIN_USERNAME))
+    ).first()
+    if platform_user is None:
+        platform_user = User(
+            username=PLATFORM_ADMIN_USERNAME,
+            nickname="平台管理员",
+            email=PLATFORM_ADMIN_EMAIL,
+            role="platform_admin",
+            status="active",
+            is_platform_admin=True,
+            password_hash=hash_password(PLATFORM_ADMIN_PASSWORD),
+        )
+        db.add(platform_user)
+        await db.flush()
+        return
+    # 已存在则确保它仍是可用的平台账号（幂等重跑）
+    platform_user.is_platform_admin = True
+    platform_user.status = "active"
+    if platform_user.password_hash is None:
+        platform_user.password_hash = hash_password(PLATFORM_ADMIN_PASSWORD)
 
 
 async def _prune_foreign_tenant_owners(db: AsyncSession, demo_tenant: Tenant) -> None:

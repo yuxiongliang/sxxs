@@ -13,8 +13,11 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AMapView from '@/components/AMapView';
+import InheritSwitch, {
+  type SettingSource,
+} from '@/pages/system/components/InheritSwitch';
 import {
   type AMapRegeo,
   type AMapSettingConfig,
@@ -37,6 +40,7 @@ export default function AMapSettingPage() {
     text: string;
   } | null>(null);
   const [picked, setPicked] = useState<AMapRegeo | null>(null);
+  const [source, setSource] = useState<SettingSource>('inherit');
 
   const settingQuery = useQuery({
     queryKey: ['amap-setting'],
@@ -49,14 +53,35 @@ export default function AMapSettingPage() {
   });
 
   const initialValues = settingQuery.data?.config;
+  const resolved = settingQuery.data;
+  const inheriting = source === 'inherit';
+
+  useEffect(() => {
+    // forced_inherit 对租户来说等同 inherit（只是不能改而已）
+    setSource(resolved?.source === 'override' ? 'override' : 'inherit');
+  }, [resolved?.source]);
+
+  const handleSourceChange = async (next: SettingSource) => {
+    setSource(next);
+    try {
+      await saveAMapSetting(null, next);
+      await queryClient.invalidateQueries({ queryKey: ['amap-setting'] });
+      setNotice({
+        type: 'success',
+        text: next === 'inherit' ? '已切换为跟随系统' : '已切换为自定义',
+      });
+    } catch (error) {
+      setNotice({ type: 'error', text: (error as Error).message });
+    }
+  };
 
   const handleSave = async (values: AMapSettingConfig) => {
     setSaving(true);
     try {
-      await saveAMapSetting({
-        ...values,
-        enabled: form.getFieldValue('enabled') ?? true,
-      });
+      await saveAMapSetting(
+        { ...values, enabled: form.getFieldValue('enabled') ?? true },
+        source,
+      );
       setNotice({ type: 'success', text: '配置已保存' });
       await queryClient.invalidateQueries({
         queryKey: ['amap-frontend-config'],
@@ -107,9 +132,19 @@ export default function AMapSettingPage() {
               title={notice.text}
             />
           ) : null}
+          <InheritSwitch
+            source={source}
+            effectiveSource={resolved?.effective_source}
+            inheritAllowed={resolved?.inherit_allowed ?? true}
+            platformActive={resolved?.platform_active ?? false}
+            policyLocked={resolved?.policy_locked ?? false}
+            maskedFields={resolved?.masked_fields}
+            onChange={handleSourceChange}
+          />
           <Form
             form={form}
             layout="vertical"
+            disabled={inheriting}
             initialValues={initialValues}
             onFinish={handleSave}
           >
@@ -156,7 +191,12 @@ export default function AMapSettingPage() {
               <InputNumber min={3} max={18} style={{ width: 160 }} />
             </Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit" loading={saving}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={saving}
+                disabled={inheriting}
+              >
                 保存
               </Button>
               <Button onClick={handleTest} loading={testing}>

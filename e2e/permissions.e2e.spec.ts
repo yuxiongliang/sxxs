@@ -28,7 +28,6 @@ test.describe('permissions: admin', () => {
       ['/users/roles', /角色/],
       ['/system/settings/payment', /支付/],
       ['/system/audit', /审计日志/],
-      ['/platform/tenants', /租户/],
       ['/finance', /财务|结算/],
     ];
 
@@ -45,9 +44,9 @@ test.describe('permissions: admin', () => {
       });
     }
 
-    // Top-level entries that only the platform admin may see are present.
+    // 平台端已拆成独立系统（apps/platform），控制台里不应再有该菜单。
     await expect(menuLink(page, '/system/audit').first()).toBeVisible();
-    await expect(menuLink(page, '/platform/tenants').first()).toBeVisible();
+    await expect(page.locator('a[href="/platform/tenants"]')).toHaveCount(0);
   });
 });
 
@@ -105,7 +104,7 @@ test.describe('permissions: customer', () => {
     await expect(page.getByText('C2C 商城').first()).toBeVisible({
       timeout: 30_000,
     });
-    await expect(page.getByText('商品', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('我的订单').first()).toBeVisible();
   });
 });
 

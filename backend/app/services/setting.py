@@ -88,7 +88,7 @@ def _ensure_category(category: str) -> None:
         raise HTTPException(status_code=404, detail="未知的设置分类")
 
 
-async def get_setting(db: AsyncSession, category: str, tenant_id: int = 1) -> SystemSetting:
+async def get_setting(db: AsyncSession, category: str, tenant_id: int) -> SystemSetting:
     _ensure_category(category)
     setting = await setting_dao.get_setting(db, category, tenant_id)
     if setting is None:
@@ -102,7 +102,7 @@ async def get_setting(db: AsyncSession, category: str, tenant_id: int = 1) -> Sy
 
 
 async def save_setting(
-    db: AsyncSession, category: str, payload: SettingUpdate, tenant_id: int = 1
+    db: AsyncSession, category: str, payload: SettingUpdate, tenant_id: int
 ) -> SystemSetting:
     _ensure_category(category)
     setting = await setting_dao.upsert_setting(
@@ -114,7 +114,7 @@ async def save_setting(
 
 
 async def test_setting(
-    db: AsyncSession, category: str, config: dict | None = None, tenant_id: int = 1
+    db: AsyncSession, category: str, config: dict | None, tenant_id: int
 ) -> SettingTestResult:
     _ensure_category(category)
     setting = await get_setting(db, category, tenant_id)

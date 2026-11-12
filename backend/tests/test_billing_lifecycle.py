@@ -135,7 +135,7 @@ async def test_overdue_invoice_downgrades_the_tenant_to_free(db_session):
     assert invoice.status == "void", "the uncollectable invoice must not stay pending forever"
 
 
-async def test_paying_the_invoice_restores_the_paid_plan(client, admin_token, db_session):
+async def test_paying_the_invoice_restores_the_paid_plan(client, admin_token, db_session, platform_token):
     subscription = await _demo_subscription(db_session)
     pro = await _plan(db_session, "pro")
     await _expire(db_session, subscription)
@@ -145,7 +145,7 @@ async def test_paying_the_invoice_restores_the_paid_plan(client, admin_token, db
 
     invoice = (await _invoices(db_session, subscription.id))[0]
     paid = await client.post(
-        f"/api/v1/platform/invoices/{invoice.id}/pay", headers=bearer(admin_token)
+        f"/api/v1/platform/invoices/{invoice.id}/pay", headers=bearer(platform_token)
     )
     assert paid.status_code == 200, paid.text
 
@@ -201,13 +201,14 @@ async def test_an_unexpired_subscription_is_untouched(db_session):
     assert subscription.current_period_end == before[2]
 
 
-async def test_run_cycle_endpoint_is_platform_scoped(client, admin_token, operator_token):
+async def test_run_cycle_endpoint_is_platform_scoped(client, admin_token, operator_token, platform_token):
     forbidden = await client.post(
         "/api/v1/platform/billing/run-cycle", headers=bearer(operator_token)
     )
-    assert forbidden.status_code == 403
+    # 401 而非 403：租户 token 的 aud 是 admin，平台接口只认 aud=platform，JWT audience 校验直接判未认证。
+    assert forbidden.status_code == 401
 
-    allowed = await client.post("/api/v1/platform/billing/run-cycle", headers=bearer(admin_token))
+    allowed = await client.post("/api/v1/platform/billing/run-cycle", headers=bearer(platform_token))
     assert allowed.status_code == 200, allowed.text
     data = allowed.json()["data"]
     assert set(data) >= {"scanned", "invoiced", "renewed", "cancelled", "downgraded"}

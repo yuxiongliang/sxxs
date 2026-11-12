@@ -36,7 +36,16 @@ export interface SettingRecord {
   category: string;
   enabled: boolean;
   config: Record<string, unknown>;
-  updated_at: string;
+  updated_at?: string;
+  // ---- 配置继承（见后端 services/setting_resolver.py）----
+  source?: 'inherit' | 'override' | 'forced_inherit';
+  effective_source?: string;
+  platform_active?: boolean;
+  policy_locked?: boolean;
+  inherit_allowed?: boolean;
+  masked_fields?: string[];
+  platform_updated_at?: string | null;
+  tenant_config?: Record<string, unknown> | null;
 }
 
 export interface SettingTestResult {
@@ -59,7 +68,14 @@ export interface AttachmentRecord {
   storage: 'local' | 'oss' | 'remote' | string;
   url: string;
   uploader: string;
+  uploader_role: string;
   source_module: string;
+  // 可见范围与审核状态（审核结论由平台给出，租户只读）
+  visibility: string;
+  review_status: string;
+  reject_reason?: string | null;
+  admin_hidden: boolean;
+  deleted_at?: string | null;
   checksum: string;
   created_at: string;
 }

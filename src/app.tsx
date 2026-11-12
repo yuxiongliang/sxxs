@@ -21,9 +21,10 @@ import {
   VersionDropdown,
 } from '@/components';
 import { type AuthTenant, me as queryMe } from '@/services/auth/api';
-import { getTenantSubscription } from '@/services/platform/api';
+import { getTenantSubscription } from '@/services/tenantBilling';
 import { AppThemeProvider } from '@/theme';
 import { clearAccessToken, getAccessToken } from '@/utils/authToken';
+import { refreshAccessToken } from '@/utils/refreshToken';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 
@@ -36,10 +37,28 @@ const loginPath = '/user/login';
  */
 const PUBLIC_PATHS = [
   '/',
+  '/site',
+  // 商城前台：商品列表与商品详情都允许匿名浏览
+  '/products',
+  // 商品详情的旧路径（现为重定向到 /products/:id），保留公开以免旧链接先被登录拦截
+  '/portal/products',
   loginPath,
   '/user/register',
   '/user/register-result',
 ];
+
+/**
+ * 公开路径判断。
+ *
+ * 必须支持**前缀匹配**：`/products/1` 这类带参数的详情页也要算公开，
+ * 否则商品详情会被当成受保护页面弹去登录。
+ * 根路径 '/' 只做精确匹配，否则会把全站都判成公开。
+ */
+const isPublicPath = (pathname: string) =>
+  PUBLIC_PATHS.some(
+    (base) =>
+      pathname === base || (base !== '/' && pathname.startsWith(`${base}/`)),
+  );
 
 /**
  * @see https://umijs.org/docs/api/runtime-config#getinitialstate
@@ -79,15 +98,43 @@ export async function getInitialState(): Promise<{
     }) as API.CurrentUser;
 
   const fetchSession = async () => {
-    if (!getAccessToken()) {
-      redirectToLogin();
-      return undefined;
+    // access token 存在 sessionStorage，**按标签页隔离** —— 新标签页打开控制台、
+    // 或直接输入受保护链接时，本页是没有 token 的。但 HttpOnly cookie 里的
+    // refresh token 是跨标签页共享的，所以先静默续期，避免让已登录用户再登一次。
+    let token = getAccessToken();
+    if (!token) {
+      token = await refreshAccessToken();
+      if (!token) {
+        redirectToLogin();
+        return undefined;
+      }
     }
     try {
       return await queryMe();
     } catch (_error) {
       clearAccessToken();
       redirectToLogin();
+      return undefined;
+    }
+  };
+
+  /**
+   * 公开页面（如站点根 /）的「静默恢复登录态」。
+   *
+   * 关键点：token 存在 sessionStorage 里，**按标签页隔离** —— 用户在新标签页登录后，
+   * 首页那个标签页读不到 token。但 refresh token 在 HttpOnly cookie 里，是跨标签页共享的，
+   * 所以这里用 cookie 换一次 access token，就能识别出「其实已经登录」。
+   *
+   * 换不到就当作匿名访客，绝不跳登录（公开页允许未登录浏览）。
+   */
+  const tryRestoreSession = async () => {
+    try {
+      let token = getAccessToken();
+      if (!token) token = await refreshAccessToken();
+      if (!token) return undefined;
+      return await queryMe();
+    } catch (_error) {
+      clearAccessToken();
       return undefined;
     }
   };
@@ -115,7 +162,7 @@ export async function getInitialState(): Promise<{
 
   // 如果不是登录页面，执行
   const { location } = history;
-  if (!PUBLIC_PATHS.includes(location.pathname)) {
+  if (!isPublicPath(location.pathname)) {
     const session = await fetchSession();
     const features = session ? await fetchPlanFeatures() : undefined;
     return {
@@ -130,11 +177,17 @@ export async function getInitialState(): Promise<{
       settingDrawerOpen: false,
     };
   }
+  // 公开页面也要识别登录态：已登录时导航显示「进入控制台」
+  const publicSession = await tryRestoreSession();
+  const publicFeatures = publicSession ? await fetchPlanFeatures() : undefined;
   return {
     fetchUserInfo,
-    permissions: [],
-    roles: [],
-    tenants: [],
+    currentUser: publicSession ? toCurrentUser(publicSession) : undefined,
+    permissions: publicSession?.permissions ?? [],
+    roles: publicSession?.roles ?? [],
+    tenants: publicSession?.tenants ?? [],
+    currentTenant: publicSession?.current_tenant,
+    features: publicFeatures,
     settings: defaultSettings as Partial<LayoutSettings>,
     settingDrawerOpen: false,
   };
@@ -216,10 +269,7 @@ export const layout: RunTimeLayoutConfig = ({
     onPageChange: () => {
       const { location } = history;
       // 如果没有登录，重定向到 login
-      if (
-        !initialState?.currentUser &&
-        !PUBLIC_PATHS.includes(location.pathname)
-      ) {
+      if (!initialState?.currentUser && !isPublicPath(location.pathname)) {
         history.replace(
           `${loginPath}?redirect=${encodeURIComponent(location.pathname + location.search + location.hash)}`,
         );

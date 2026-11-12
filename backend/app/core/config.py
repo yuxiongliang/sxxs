@@ -15,11 +15,17 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     refresh_cookie_name: str = "antd_pro_refresh"
+    # 平台端用独立的 cookie 名：开发环境两个前端共用 localhost，
+    # 复用同一个 cookie 会让两边登录互相覆盖对方的 refresh token。
+    platform_refresh_cookie_name: str = "sxxs_platform_refresh"
     cookie_secure: bool = False
     # Schema is owned by Alembic. Set to false to manage migrations out of band
     # (recommended once the service runs behind a release pipeline).
     db_auto_migrate: bool = True
+    environment: str = "development"
     upload_dir: str = "uploads"
+    # 附件静态目录只允许开发环境直出；生产一律走鉴权下载 / 签名 URL。
+    serve_uploads_static: bool = True
     public_base_url: str = "http://127.0.0.1:9000"
     max_upload_size: int = 50 * 1024 * 1024
 

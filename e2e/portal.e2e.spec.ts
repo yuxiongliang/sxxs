@@ -22,11 +22,12 @@ async function pickInStockProduct(page: Page) {
     const button = card.getByRole('button', { name: '加入购物车' });
     if ((await button.count()) === 0) continue;
     if (await button.first().isEnabled()) {
-      const name = await card
-        .locator('.ant-card-meta-title')
-        .first()
-        .innerText()
-        .catch(() => '');
+      // 前台商品卡不是 Card.Meta 结构：名称是卡片正文首行
+      const name =
+        (await card.innerText().catch(() => ''))
+          .split('\n')
+          .map((line) => line.trim())
+          .find((line) => line.length > 0) ?? '';
       return { card, name };
     }
   }
@@ -41,16 +42,16 @@ async function pickInStockProduct(page: Page) {
 test.describe('portal: buyer journey', () => {
   test('browses products and opens a product detail page', async ({ page }) => {
     await loginAs(page, CUSTOMER);
-    await page.goto('/portal');
+    await page.goto('/products');
 
-    await expect(page.getByText('C2C 商城').first()).toBeVisible({
+    await expect(page.locator('.ant-card').first()).toBeVisible({
       timeout: 30_000,
     });
     const detailLink = page.getByRole('button', { name: '查看详情' }).first();
     await expect(detailLink).toBeVisible({ timeout: 30_000 });
     await detailLink.click();
 
-    await expect(page).toHaveURL(/\/portal\/products\/\d+/, {
+    await expect(page).toHaveURL(/\/products\/\d+/, {
       timeout: 30_000,
     });
     await expect(page.getByText('卖家：').first()).toBeVisible();
@@ -61,7 +62,7 @@ test.describe('portal: buyer journey', () => {
 
   test('adds a product to the cart and sees it listed', async ({ page }) => {
     await loginAs(page, CUSTOMER);
-    await page.goto('/portal');
+    await page.goto('/products');
 
     const picked = await pickInStockProduct(page);
     test.skip(!picked, '演示商品均已售罄，跳过加购用例');
@@ -90,7 +91,7 @@ test.describe('portal: buyer journey', () => {
     await loginAs(page, CUSTOMER);
 
     // Make sure there is at least one line to settle.
-    await page.goto('/portal');
+    await page.goto('/products');
     await page.getByRole('button', { name: '加入购物车' }).first().click();
     await expect(page.getByText('已加入购物车').first()).toBeVisible({
       timeout: 20_000,

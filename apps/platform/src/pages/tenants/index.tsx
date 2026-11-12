@@ -28,7 +28,7 @@ import type {
   InvoiceRecord,
   PlanRecord,
   TenantWithPlan,
-} from '@/services/platform/api';
+} from '@/services/api';
 import {
   createPlan,
   createTenant,
@@ -41,8 +41,8 @@ import {
   subscribeTenant,
   suspendTenant,
   updateTenant,
-} from '@/services/platform/api';
-import SettingPage from '../../system/components/SettingPage';
+} from '@/services/api';
+import SettingPage from '@/components/PageShell';
 
 const yuan = (cents: number) => `¥${(cents / 100).toFixed(2)}`;
 

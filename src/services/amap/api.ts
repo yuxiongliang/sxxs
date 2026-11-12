@@ -30,6 +30,13 @@ export interface AMapSetting {
   enabled: boolean;
   config: AMapSettingConfig;
   updated_at?: string;
+  // ---- 配置继承（见后端 services/setting_resolver.py）----
+  source?: 'inherit' | 'override' | 'forced_inherit';
+  effective_source?: string;
+  platform_active?: boolean;
+  policy_locked?: boolean;
+  inherit_allowed?: boolean;
+  masked_fields?: string[];
 }
 
 export interface AMapRegeo {
@@ -54,12 +61,17 @@ export async function getAMapSetting() {
   return unwrap<AMapSetting>(request('/api/v1/settings/amap', { method: 'GET' }));
 }
 
-export async function saveAMapSetting(config: AMapSettingConfig) {
+export async function saveAMapSetting(
+  config: AMapSettingConfig | null,
+  source: 'inherit' | 'override' = 'override',
+) {
+  // config 传 null 表示「只切换来源」：不传 config，后端保留租户原有配置，
+  // 否则「跟随系统」时提交的是平台脱敏值（******），会把自己的配置毁掉。
+  const data = config
+    ? { source, enabled: config.enabled, config }
+    : { source };
   return unwrap<AMapSetting>(
-    request('/api/v1/settings/amap', {
-      method: 'PUT',
-      data: { enabled: config.enabled, config },
-    }),
+    request('/api/v1/settings/amap', { method: 'PUT', data }),
   );
 }
 

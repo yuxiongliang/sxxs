@@ -22,6 +22,7 @@ from app.core.request_context import (
     set_request_meta,
 )
 from app.seed import seed_demo_data
+from app.services import moderation
 
 logger = structlog.get_logger(__name__)
 
@@ -32,8 +33,11 @@ async def lifespan(_app: FastAPI):
     await seed_demo_data()
     await im_bus.start_subscriber()
     billing_scheduler.start()
+    # 附件审核 worker：上传入队、后台出结论；未启动时上传会就地同步审完
+    moderation.start()
     logger.info("admin_api_started", prefix=settings.api_v1_prefix)
     yield
+    await moderation.stop()
     await billing_scheduler.stop()
     await im_bus.stop_subscriber()
     await engine.dispose()
@@ -81,7 +85,10 @@ app.add_middleware(
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 # 高德 JS API 安全密钥代理：浏览器只拿到 serviceHost，密钥留在服务端
 app.include_router(proxy_amap_router)
-app.mount("/uploads", StaticFiles(directory=str(settings.upload_path)), name="uploads")
+# 静态附件目录只在开发环境开放：生产环境必须走 /attachments/{id}/download，
+# 否则 KYC 证件、买家举证材料只要知道 URL 就能被任何人下载。
+if settings.serve_uploads_static and settings.environment == "development":
+    app.mount("/uploads", StaticFiles(directory=str(settings.upload_path)), name="uploads")
 
 
 @app.get("/health", tags=["system"])

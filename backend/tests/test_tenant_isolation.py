@@ -20,9 +20,9 @@ ACME = {
 }
 
 
-async def _create_tenant(client, admin_token) -> dict:
+async def _create_tenant(client, platform_token) -> dict:
     response = await client.post(
-        "/api/v1/platform/tenants", headers=bearer(admin_token), json=ACME
+        "/api/v1/platform/tenants", headers=bearer(platform_token), json=ACME
     )
     assert response.status_code == 200, response.text
     return response.json()["data"]
@@ -37,12 +37,12 @@ async def _owner_login(client) -> str:
     return response.json()["data"]["access_token"]
 
 
-async def test_platform_admin_can_list_and_create_tenants(client, admin_token):
-    before = (await client.get("/api/v1/platform/tenants", headers=bearer(admin_token))).json()[
+async def test_platform_admin_can_list_and_create_tenants(client, admin_token, platform_token):
+    before = (await client.get("/api/v1/platform/tenants", headers=bearer(platform_token))).json()[
         "data"
     ]
-    created = await _create_tenant(client, admin_token)
-    after = (await client.get("/api/v1/platform/tenants", headers=bearer(admin_token))).json()[
+    created = await _create_tenant(client, platform_token)
+    after = (await client.get("/api/v1/platform/tenants", headers=bearer(platform_token))).json()[
         "data"
     ]
 
@@ -50,28 +50,29 @@ async def test_platform_admin_can_list_and_create_tenants(client, admin_token):
     assert len(after) == len(before) + 1
 
 
-async def test_duplicate_tenant_slug_is_rejected(client, admin_token):
-    await _create_tenant(client, admin_token)
+async def test_duplicate_tenant_slug_is_rejected(client, admin_token, platform_token):
+    await _create_tenant(client, platform_token)
     response = await client.post(
-        "/api/v1/platform/tenants", headers=bearer(admin_token), json=ACME
+        "/api/v1/platform/tenants", headers=bearer(platform_token), json=ACME
     )
     assert response.status_code == 409
 
 
-async def test_tenant_owner_cannot_create_more_tenants(client, admin_token):
-    await _create_tenant(client, admin_token)
+async def test_tenant_owner_cannot_create_more_tenants(client, admin_token, platform_token):
+    await _create_tenant(client, platform_token)
     owner_token = await _owner_login(client)
     response = await client.post(
         "/api/v1/platform/tenants",
         headers=bearer(owner_token),
         json={**ACME, "slug": "another-tenant", "email": "other@example.com"},
     )
-    assert response.status_code == 403
+    # 401 而非 403：租户 token 的 aud 是 admin，平台接口只认 aud=platform，JWT audience 校验直接判未认证。
+    assert response.status_code == 401
 
 
-async def test_new_tenant_sees_no_demo_users(client, admin_token):
+async def test_new_tenant_sees_no_demo_users(client, admin_token, platform_token):
     """Acceptance #1: tenant B must not see tenant A's users."""
-    await _create_tenant(client, admin_token)
+    await _create_tenant(client, platform_token)
     owner_token = await _owner_login(client)
 
     response = await client.get("/api/v1/users", headers=bearer(owner_token))
@@ -84,8 +85,8 @@ async def test_new_tenant_sees_no_demo_users(client, admin_token):
     assert "lisi" not in usernames
 
 
-async def test_new_tenant_sees_no_demo_departments(client, admin_token):
-    await _create_tenant(client, admin_token)
+async def test_new_tenant_sees_no_demo_departments(client, admin_token, platform_token):
+    await _create_tenant(client, platform_token)
     owner_token = await _owner_login(client)
 
     response = await client.get("/api/v1/departments", headers=bearer(owner_token))
@@ -93,8 +94,8 @@ async def test_new_tenant_sees_no_demo_departments(client, admin_token):
     assert response.json()["data"]["list"] == []
 
 
-async def test_new_tenant_sees_no_demo_orders(client, admin_token):
-    await _create_tenant(client, admin_token)
+async def test_new_tenant_sees_no_demo_orders(client, admin_token, platform_token):
+    await _create_tenant(client, platform_token)
     owner_token = await _owner_login(client)
 
     response = await client.get("/api/v1/admin/orders", headers=bearer(owner_token))
@@ -102,8 +103,8 @@ async def test_new_tenant_sees_no_demo_orders(client, admin_token):
     assert response.json()["data"] == []
 
 
-async def test_new_tenant_sees_no_demo_products(client, admin_token):
-    await _create_tenant(client, admin_token)
+async def test_new_tenant_sees_no_demo_products(client, admin_token, platform_token):
+    await _create_tenant(client, platform_token)
     owner_token = await _owner_login(client)
 
     response = await client.get("/api/v1/portal/products", headers=bearer(owner_token))
@@ -111,9 +112,9 @@ async def test_new_tenant_sees_no_demo_products(client, admin_token):
     assert response.json()["data"] == []
 
 
-async def test_settings_are_written_per_tenant(client, admin_token):
+async def test_settings_are_written_per_tenant(client, admin_token, platform_token):
     """A tenant owner editing payment settings must not affect the demo tenant."""
-    await _create_tenant(client, admin_token)
+    await _create_tenant(client, platform_token)
     owner_token = await _owner_login(client)
 
     demo_before = (
@@ -135,11 +136,11 @@ async def test_settings_are_written_per_tenant(client, admin_token):
     assert demo_after["enabled"] == demo_before["enabled"]
 
 
-async def test_owner_cannot_act_inside_the_demo_tenant(client, admin_token):
+async def test_owner_cannot_act_inside_the_demo_tenant(client, admin_token, platform_token):
     """A token is bound to one tenant; it cannot be replayed against another."""
     from app.core.security import create_access_token
 
-    await _create_tenant(client, admin_token)
+    await _create_tenant(client, platform_token)
     owner = (
         await client.get("/api/v1/auth/me", headers=bearer(await _owner_login(client)))
     ).json()["data"]
@@ -155,8 +156,8 @@ async def test_owner_cannot_act_inside_the_demo_tenant(client, admin_token):
     assert response.status_code == 403
 
 
-async def test_tenant_member_listing_is_scoped(client, admin_token):
-    response = await client.get("/api/v1/platform/tenants", headers=bearer(admin_token))
+async def test_tenant_member_listing_is_scoped(client, admin_token, platform_token):
+    response = await client.get("/api/v1/platform/tenants", headers=bearer(platform_token))
     assert response.status_code == 200
     slugs = {item["slug"] for item in response.json()["data"]}
     assert "demo" in slugs
@@ -165,18 +166,17 @@ async def test_tenant_member_listing_is_scoped(client, admin_token):
 @pytest.mark.parametrize(
     "slug", ["Invalid Slug", "UPPERCASE", "has_underscore", "a"]
 )
-async def test_tenant_slug_is_validated(client, admin_token, slug):
+async def test_tenant_slug_is_validated(client, admin_token, slug, platform_token):
     response = await client.post(
         "/api/v1/platform/tenants",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={**ACME, "slug": slug, "email": f"{abs(hash(slug))}@example.com"},
     )
     assert response.status_code == 422
 
 
 async def test_reseeding_does_not_leak_demo_membership_to_foreign_owners(
-    client, admin_token, db_session
-):
+    client, admin_token, db_session, platform_token):
     """Regression: a restart must not add other tenants' owners to the demo tenant.
 
     ``seed_auth_data`` runs on every application startup. Backfilling a demo
@@ -189,7 +189,7 @@ async def test_reseeding_does_not_leak_demo_membership_to_foreign_owners(
     from app.models.user import User
     from app.seed_auth import seed_auth_data
 
-    await _create_tenant(client, admin_token)
+    await _create_tenant(client, platform_token)
     await seed_auth_data(db_session)  # simulate a backend restart
 
     owner = (

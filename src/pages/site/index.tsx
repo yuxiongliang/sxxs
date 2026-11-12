@@ -12,7 +12,7 @@ import {
   WalletOutlined,
 } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
-import { Button, Card, Col, Row } from 'antd';
+import { Card, Col, Row } from 'antd';
 import { useMemo } from 'react';
 import HeroBackdrop from './components/HeroBackdrop';
 import SiteFooter from './components/SiteFooter';
@@ -21,6 +21,9 @@ import type { SearchEntry } from './search';
 import useStyles from './style';
 import { usePrefersReducedMotion } from './useReducedMotion';
 import { useTypewriter } from './useTypewriter';
+
+/** 平台端是独立系统（赛霄玄思 SaaS 管理平台），这里只做跨系统跳转。 */
+const PLATFORM_CONSOLE_URL = 'http://localhost:8001/tenants';
 
 const FEATURES = [
   { key: 'saas', icon: <SafetyCertificateOutlined />, href: '/users/list' },
@@ -33,13 +36,13 @@ const FEATURES = [
 
 const MODULES = [
   { key: 'auth', icon: <SafetyCertificateOutlined />, href: '/users/roles' },
-  { key: 'tenant', icon: <ClusterOutlined />, href: '/platform/tenants' },
+  { key: 'tenant', icon: <ClusterOutlined />, href: PLATFORM_CONSOLE_URL },
   { key: 'seller', icon: <ShopOutlined />, href: '/sellers' },
   { key: 'product', icon: <ShoppingOutlined />, href: '/products' },
   { key: 'order', icon: <ShoppingOutlined />, href: '/orders' },
   { key: 'im', icon: <MessageOutlined />, href: '/messages' },
   { key: 'finance', icon: <WalletOutlined />, href: '/finance' },
-  { key: 'billing', icon: <CreditCardOutlined />, href: '/platform/tenants' },
+  { key: 'billing', icon: <CreditCardOutlined />, href: PLATFORM_CONSOLE_URL },
   { key: 'audit', icon: <AuditOutlined />, href: '/system/audit' },
   { key: 'dashboard', icon: <BarChartOutlined />, href: '/dashboard/analysis' },
   { key: 'map', icon: <EnvironmentOutlined />, href: '/system/settings/amap' },
@@ -72,24 +75,6 @@ function buildSearchEntries(t: Translate): SearchEntry[] {
       title: t({ id: 'site.nav.quickstart', defaultMessage: '快速开始' }),
       href: '#quickstart',
     },
-    {
-      id: 'nav-docs',
-      group: 'nav',
-      title: t({ id: 'site.nav.docs', defaultMessage: '文档' }),
-      href: '/welcome',
-    },
-    {
-      id: 'nav-console',
-      group: 'nav',
-      title: t({ id: 'site.nav.console', defaultMessage: '进入控制台' }),
-      href: '/dashboard/analysis',
-    },
-    {
-      id: 'nav-login',
-      group: 'nav',
-      title: t({ id: 'site.nav.login', defaultMessage: '登录' }),
-      href: '/user/login',
-    },
   ];
 
   const features: SearchEntry[] = FEATURES.map((item) => ({
@@ -100,34 +85,19 @@ function buildSearchEntries(t: Translate): SearchEntry[] {
       defaultMessage: item.key,
     }),
     desc: t({ id: `site.feature.${item.key}.desc`, defaultMessage: '' }),
-    href: item.href,
+    href: '#features',
   }));
 
   const modules: SearchEntry[] = MODULES.map((item) => ({
     id: `module-${item.key}`,
     group: 'module',
     title: t({ id: `site.module.${item.key}`, defaultMessage: item.key }),
-    href: item.href,
+    href: '#modules',
   }));
 
-  const docs: SearchEntry[] = [
-    {
-      id: 'doc-readme',
-      group: 'doc',
-      title: t({ id: 'site.footer.link.readme', defaultMessage: '项目自述' }),
-      desc: 'README',
-      href: '/welcome',
-    },
-    {
-      id: 'doc-ops',
-      group: 'doc',
-      title: t({ id: 'site.footer.link.docs', defaultMessage: '运维文档' }),
-      desc: 'docs/admin-console.md',
-      href: '/welcome',
-    },
-  ];
+  // 纯介绍页不提供站外/受保护页面入口，搜索只做页内跳转
 
-  return [...nav, ...features, ...modules, ...docs];
+  return [...nav, ...features, ...modules];
 }
 
 export default function SiteLandingPage() {
@@ -141,7 +111,7 @@ export default function SiteLandingPage() {
 
   return (
     <div className={styles.shell}>
-      <SiteHeader entries={entries} />
+      <SiteHeader entries={entries} showAuth={false} />
 
       <main>
         <section className={styles.hero}>
@@ -170,32 +140,6 @@ export default function SiteLandingPage() {
             >
               {t({ id: 'site.hero.subtitle', defaultMessage: '' })}
             </p>
-            <Row
-              justify="center"
-              gutter={[12, 12]}
-              className={styles.heroFadeUp}
-              style={{ animationDelay: '260ms' }}
-            >
-              <Col>
-                <Button type="primary" size="large" href="/dashboard/analysis">
-                  {t({
-                    id: 'site.hero.ctaConsole',
-                    defaultMessage: '进入控制台',
-                  })}
-                </Button>
-              </Col>
-              <Col>
-                <Button size="large" href="/portal">
-                  {t({
-                    id: 'site.hero.ctaPortal',
-                    defaultMessage: '打开买家商城',
-                  })}
-                </Button>
-              </Col>
-            </Row>
-            <div style={{ marginTop: 16, opacity: 0.6, fontSize: 13 }}>
-              {t({ id: 'site.hero.note', defaultMessage: '' })}
-            </div>
 
             <Row justify="center" gutter={[56, 24]} style={{ marginTop: 56 }}>
               {[
@@ -263,13 +207,14 @@ export default function SiteLandingPage() {
             <Row gutter={[12, 12]}>
               {MODULES.map((item) => (
                 <Col xs={12} md={8} xl={6} key={item.key}>
-                  <a className={styles.moduleItem} href={item.href}>
+                  {/* 纯介绍页：模块只做展示，不提供跳转（避免把访客引到受保护页面） */}
+                  <div className={styles.moduleItem}>
                     {item.icon}
                     {t({
                       id: `site.module.${item.key}`,
                       defaultMessage: item.key,
                     })}
-                  </a>
+                  </div>
                 </Col>
               ))}
             </Row>
@@ -316,7 +261,7 @@ export default function SiteLandingPage() {
         </section>
       </main>
 
-      <SiteFooter />
+      <SiteFooter showLinks={false} />
     </div>
   );
 }

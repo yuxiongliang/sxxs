@@ -14,7 +14,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from app.core.db import AsyncSessionLocal
-from app.services import setting as setting_service
+from app.services import setting_resolver
 
 router = APIRouter(tags=["高德代理"])
 
@@ -24,9 +24,15 @@ UPSTREAM_STYLES = "https://webapi.amap.com"
 
 
 async def _security_code() -> str:
+    """代理用的 securityCode。
+
+    注意：这里仍是 DEMO_TENANT_ID。等到自定义域名（Host 解析）上线后，
+    应改为按请求 Host 解析租户，否则多租户共用代理会拿错 key。
+    """
     async with AsyncSessionLocal() as session:
-        setting = await setting_service.get_setting(session, "amap", DEMO_TENANT_ID)
-        config = setting.config or {}
+        config = await setting_resolver.resolve_for_runtime(
+            session, DEMO_TENANT_ID, "amap"
+        )
     return str(config.get("securityCode") or "")
 
 

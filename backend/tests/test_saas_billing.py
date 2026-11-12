@@ -21,9 +21,9 @@ OTHER_TENANT = {
 }
 
 
-async def _create_other_tenant(client, admin_token) -> dict:
+async def _create_other_tenant(client, platform_token) -> dict:
     response = await client.post(
-        "/api/v1/platform/tenants", headers=bearer(admin_token), json=OTHER_TENANT
+        "/api/v1/platform/tenants", headers=bearer(platform_token), json=OTHER_TENANT
     )
     assert response.status_code == 200, response.text
     return response.json()["data"]
@@ -43,14 +43,14 @@ async def _other_token(client) -> str:
 # --------------------------------------------------------------------------- #
 
 
-async def test_seeded_plan_catalogue(client, admin_token):
-    response = await client.get("/api/v1/platform/plans", headers=bearer(admin_token))
+async def test_seeded_plan_catalogue(client, admin_token, platform_token):
+    response = await client.get("/api/v1/platform/plans", headers=bearer(platform_token))
     assert response.status_code == 200, response.text
     codes = {plan["code"] for plan in response.json()["data"]}
     assert {"free", "pro", "enterprise"} <= codes
 
 
-async def test_create_plan_and_reject_duplicate_code(client, admin_token):
+async def test_create_plan_and_reject_duplicate_code(client, admin_token, platform_token):
     payload = {
         "code": "pytest-plan",
         "name": "测试套餐",
@@ -59,29 +59,29 @@ async def test_create_plan_and_reject_duplicate_code(client, admin_token):
         "features": ["portal"],
     }
     created = await client.post(
-        "/api/v1/platform/plans", headers=bearer(admin_token), json=payload
+        "/api/v1/platform/plans", headers=bearer(platform_token), json=payload
     )
     assert created.status_code == 200, created.text
     assert created.json()["data"]["code"] == "pytest-plan"
 
     duplicate = await client.post(
-        "/api/v1/platform/plans", headers=bearer(admin_token), json=payload
+        "/api/v1/platform/plans", headers=bearer(platform_token), json=payload
     )
     assert duplicate.status_code == 409
 
 
-async def test_update_plan(client, admin_token):
+async def test_update_plan(client, admin_token, platform_token):
     created = (
         await client.post(
             "/api/v1/platform/plans",
-            headers=bearer(admin_token),
+            headers=bearer(platform_token),
             json={"code": "pytest-plan-2", "name": "改前", "price_cents": 100},
         )
     ).json()["data"]
 
     updated = await client.put(
         f"/api/v1/platform/plans/{created['id']}",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"name": "改后", "price_cents": 200},
     )
     assert updated.status_code == 200
@@ -90,10 +90,10 @@ async def test_update_plan(client, admin_token):
 
 
 @pytest.mark.parametrize("code", ["UPPER", "has space", "a"])
-async def test_plan_code_is_validated(client, admin_token, code):
+async def test_plan_code_is_validated(client, admin_token, code, platform_token):
     response = await client.post(
         "/api/v1/platform/plans",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"code": code, "name": "x"},
     )
     assert response.status_code == 422
@@ -104,9 +104,9 @@ async def test_plan_code_is_validated(client, admin_token, code):
 # --------------------------------------------------------------------------- #
 
 
-async def test_demo_tenant_is_on_the_pro_plan(client, admin_token):
+async def test_demo_tenant_is_on_the_pro_plan(client, admin_token, platform_token):
     report = (
-        await client.get("/api/v1/platform/tenants/1/usage", headers=bearer(admin_token))
+        await client.get("/api/v1/platform/tenants/1/usage", headers=bearer(platform_token))
     ).json()["data"]
     assert report["plan"]["code"] == "pro"
     assert report["subscription"]["status"] in {"active", "trialing"}
@@ -114,13 +114,13 @@ async def test_demo_tenant_is_on_the_pro_plan(client, admin_token):
     assert report["quotas"]["products"] == 5000
 
 
-async def test_new_tenant_starts_a_trial_of_the_default_plan(client, admin_token):
-    created = await _create_other_tenant(client, admin_token)
+async def test_new_tenant_starts_a_trial_of_the_default_plan(client, admin_token, platform_token):
+    created = await _create_other_tenant(client, platform_token)
     token = await _other_token(client)
 
     report = (
         await client.get(
-            f"/api/v1/platform/tenants/{created['id']}/usage", headers=bearer(admin_token)
+            f"/api/v1/platform/tenants/{created['id']}/usage", headers=bearer(platform_token)
         )
     ).json()["data"]
     assert report["plan"]["code"] == "free"
@@ -134,28 +134,28 @@ async def test_new_tenant_starts_a_trial_of_the_default_plan(client, admin_token
     assert own.json()["data"]["plan"]["code"] == "free"
 
 
-async def test_usage_counts_reflect_business_data(client, admin_token):
+async def test_usage_counts_reflect_business_data(client, admin_token, platform_token):
     report = (
-        await client.get("/api/v1/platform/tenants/1/usage", headers=bearer(admin_token))
+        await client.get("/api/v1/platform/tenants/1/usage", headers=bearer(platform_token))
     ).json()["data"]
     assert report["used"]["products"] >= 1
     assert report["used"]["members"] >= 1
     assert report["remaining"]["products"] == 5000 - report["used"]["products"]
 
 
-async def test_change_plan(client, admin_token):
-    created = await _create_other_tenant(client, admin_token)
+async def test_change_plan(client, admin_token, platform_token):
+    created = await _create_other_tenant(client, platform_token)
     enterprise = next(
         plan
         for plan in (
-            await client.get("/api/v1/platform/plans", headers=bearer(admin_token))
+            await client.get("/api/v1/platform/plans", headers=bearer(platform_token))
         ).json()["data"]
         if plan["code"] == "enterprise"
     )
 
     response = await client.post(
         f"/api/v1/platform/tenants/{created['id']}/subscription",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"plan_id": enterprise["id"]},
     )
     assert response.status_code == 200, response.text
@@ -163,7 +163,7 @@ async def test_change_plan(client, admin_token):
 
     report = (
         await client.get(
-            f"/api/v1/platform/tenants/{created['id']}/usage", headers=bearer(admin_token)
+            f"/api/v1/platform/tenants/{created['id']}/usage", headers=bearer(platform_token)
         )
     ).json()["data"]
     assert report["plan"]["code"] == "enterprise"
@@ -175,19 +175,19 @@ async def test_change_plan(client, admin_token):
 # --------------------------------------------------------------------------- #
 
 
-async def test_member_quota_is_enforced(client, admin_token, db_session):
+async def test_member_quota_is_enforced(client, admin_token, db_session, platform_token):
     """A tenant on a plan with members=1 cannot add a second member."""
-    created = await _create_other_tenant(client, admin_token)
+    created = await _create_other_tenant(client, platform_token)
     tiny = (
         await client.post(
             "/api/v1/platform/plans",
-            headers=bearer(admin_token),
+            headers=bearer(platform_token),
             json={"code": "tiny", "name": "极小套餐", "quotas": {"products": 1, "members": 1}},
         )
     ).json()["data"]
     await client.post(
         f"/api/v1/platform/tenants/{created['id']}/subscription",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"plan_id": tiny["id"]},
     )
 
@@ -207,12 +207,12 @@ async def test_member_quota_is_enforced(client, admin_token, db_session):
     assert "配额" in blocked.json()["message"]
 
 
-async def test_product_quota_is_enforced(client, admin_token, operator_token, db_session):
+async def test_product_quota_is_enforced(client, admin_token, operator_token, db_session, platform_token):
     """Switch the demo tenant to a products=0 plan and seller listing must fail."""
     zero = (
         await client.post(
             "/api/v1/platform/plans",
-            headers=bearer(admin_token),
+            headers=bearer(platform_token),
             json={"code": "zero-products", "name": "零商品", "quotas": {"products": 0}},
         )
     ).json()["data"]
@@ -221,7 +221,7 @@ async def test_product_quota_is_enforced(client, admin_token, operator_token, db
 
     await client.post(
         "/api/v1/platform/tenants/1/subscription",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"plan_id": zero["id"]},
     )
 
@@ -239,11 +239,11 @@ async def test_product_quota_is_enforced(client, admin_token, operator_token, db
 # --------------------------------------------------------------------------- #
 
 
-async def test_rename_tenant(client, admin_token):
-    created = await _create_other_tenant(client, admin_token)
+async def test_rename_tenant(client, admin_token, platform_token):
+    created = await _create_other_tenant(client, platform_token)
     response = await client.put(
         f"/api/v1/platform/tenants/{created['id']}",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"name": "改名后的租户"},
     )
     assert response.status_code == 200
@@ -252,8 +252,8 @@ async def test_rename_tenant(client, admin_token):
 
 async def test_suspend_blocks_the_tenant_and_resume_restores_it(
     client, admin_token, db_session
-):
-    created = await _create_other_tenant(client, admin_token)
+, platform_token):
+    created = await _create_other_tenant(client, platform_token)
     token = await _other_token(client)
 
     # Before suspension the owner can use the API.
@@ -263,7 +263,7 @@ async def test_suspend_blocks_the_tenant_and_resume_restores_it(
 
     suspended = await client.post(
         f"/api/v1/platform/tenants/{created['id']}/suspend",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"reason": "欠费"},
     )
     assert suspended.status_code == 200, suspended.text
@@ -272,16 +272,16 @@ async def test_suspend_blocks_the_tenant_and_resume_restores_it(
     assert blocked.status_code == 403, "a suspended tenant must fail closed"
 
     await client.post(
-        f"/api/v1/platform/tenants/{created['id']}/resume", headers=bearer(admin_token)
+        f"/api/v1/platform/tenants/{created['id']}/resume", headers=bearer(platform_token)
     )
     restored = await client.get("/api/v1/auth/me", headers=bearer(token))
     assert restored.status_code == 200
 
 
-async def test_demo_tenant_cannot_be_suspended(client, admin_token):
+async def test_demo_tenant_cannot_be_suspended(client, admin_token, platform_token):
     response = await client.post(
         "/api/v1/platform/tenants/1/suspend",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"reason": "误操作"},
     )
     assert response.status_code == 400
@@ -294,17 +294,17 @@ async def test_demo_tenant_cannot_be_suspended(client, admin_token):
 
 async def test_renew_creates_a_pending_invoice_and_extends_the_period(
     client, admin_token, db_session
-):
-    created = await _create_other_tenant(client, admin_token)
+, platform_token):
+    created = await _create_other_tenant(client, platform_token)
     before = (
         await client.get(
-            f"/api/v1/platform/tenants/{created['id']}/usage", headers=bearer(admin_token)
+            f"/api/v1/platform/tenants/{created['id']}/usage", headers=bearer(platform_token)
         )
     ).json()["data"]["subscription"]
 
     renewed = await client.post(
         f"/api/v1/platform/tenants/{created['id']}/renew",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"days": 30},
     )
     assert renewed.status_code == 200, renewed.text
@@ -314,46 +314,46 @@ async def test_renew_creates_a_pending_invoice_and_extends_the_period(
 
     after = (
         await client.get(
-            f"/api/v1/platform/tenants/{created['id']}/usage", headers=bearer(admin_token)
+            f"/api/v1/platform/tenants/{created['id']}/usage", headers=bearer(platform_token)
         )
     ).json()["data"]["subscription"]
     assert after["current_period_end"] > before["current_period_end"]
 
 
-async def test_pay_invoice_and_reject_double_payment(client, admin_token):
-    created = await _create_other_tenant(client, admin_token)
+async def test_pay_invoice_and_reject_double_payment(client, admin_token, platform_token):
+    created = await _create_other_tenant(client, platform_token)
     invoice = (
         await client.post(
             f"/api/v1/platform/tenants/{created['id']}/renew",
-            headers=bearer(admin_token),
+            headers=bearer(platform_token),
             json={"days": 30},
         )
     ).json()["data"]["invoice"]
 
     paid = await client.post(
-        f"/api/v1/platform/invoices/{invoice['id']}/pay", headers=bearer(admin_token)
+        f"/api/v1/platform/invoices/{invoice['id']}/pay", headers=bearer(platform_token)
     )
     assert paid.status_code == 200
     assert paid.json()["data"]["status"] == "paid"
     assert paid.json()["data"]["paid_at"]
 
     again = await client.post(
-        f"/api/v1/platform/invoices/{invoice['id']}/pay", headers=bearer(admin_token)
+        f"/api/v1/platform/invoices/{invoice['id']}/pay", headers=bearer(platform_token)
     )
     assert again.status_code == 400
 
 
-async def test_invoices_are_filterable_by_tenant(client, admin_token):
-    created = await _create_other_tenant(client, admin_token)
+async def test_invoices_are_filterable_by_tenant(client, admin_token, platform_token):
+    created = await _create_other_tenant(client, platform_token)
     await client.post(
         f"/api/v1/platform/tenants/{created['id']}/renew",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"days": 30},
     )
 
     mine = await client.get(
         "/api/v1/platform/invoices",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         params={"tenant_id": created["id"]},
     )
     assert mine.status_code == 200
@@ -361,9 +361,9 @@ async def test_invoices_are_filterable_by_tenant(client, admin_token):
     assert mine.json()["data"], "the renewed tenant must have an invoice"
 
 
-async def test_tenant_list_includes_plan_information(client, admin_token):
-    await _create_other_tenant(client, admin_token)
-    response = await client.get("/api/v1/platform/tenants-list", headers=bearer(admin_token))
+async def test_tenant_list_includes_plan_information(client, admin_token, platform_token):
+    await _create_other_tenant(client, platform_token)
+    response = await client.get("/api/v1/platform/tenants-list", headers=bearer(platform_token))
     assert response.status_code == 200
     rows = response.json()["data"]
     assert rows
@@ -380,33 +380,34 @@ async def test_tenant_list_includes_plan_information(client, admin_token):
     ["/api/v1/platform/plans", "/api/v1/platform/invoices", "/api/v1/platform/tenants-list"],
 )
 async def test_billing_console_is_platform_only(client, operator_token, customer_token, path):
-    assert (await client.get(path, headers=bearer(operator_token))).status_code == 403
-    assert (await client.get(path, headers=bearer(customer_token))).status_code == 403
+    # 401 而非 403：租户 token 的 aud 是 admin，平台接口只认 aud=platform，JWT audience 校验直接判未认证。
+    assert (await client.get(path, headers=bearer(operator_token))).status_code == 401
+    assert (await client.get(path, headers=bearer(customer_token))).status_code == 401
 
 
-async def test_tenant_owner_cannot_suspend_itself(client, admin_token):
-    created = await _create_other_tenant(client, admin_token)
+async def test_tenant_owner_cannot_suspend_itself(client, admin_token, platform_token):
+    created = await _create_other_tenant(client, platform_token)
     token = await _other_token(client)
     response = await client.post(
         f"/api/v1/platform/tenants/{created['id']}/suspend",
         headers=bearer(token),
         json={"reason": "自我停用"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
-async def test_suspended_tenant_rows_remain_queryable_by_platform(client, admin_token, db_session):
-    created = await _create_other_tenant(client, admin_token)
+async def test_suspended_tenant_rows_remain_queryable_by_platform(client, admin_token, db_session, platform_token):
+    created = await _create_other_tenant(client, platform_token)
     await client.post(
         f"/api/v1/platform/tenants/{created['id']}/suspend",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"reason": "验证"},
     )
     tenant = await db_session.get(Tenant, created["id"])
     assert tenant is not None and tenant.status == "suspended"
 
     rows = (
-        await client.get("/api/v1/platform/tenants-list", headers=bearer(admin_token))
+        await client.get("/api/v1/platform/tenants-list", headers=bearer(platform_token))
     ).json()["data"]
     row = next(item for item in rows if item["id"] == created["id"])
     assert row["status"] == "suspended"

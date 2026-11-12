@@ -28,6 +28,9 @@ import {
 } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { getSetting, saveSetting, testSetting } from '@/services/system/api';
+import InheritSwitch, {
+  type SettingSource,
+} from '@/pages/system/components/InheritSwitch';
 import type { SettingTestResult } from '@/services/system/types';
 import SettingPage from '../../components/SettingPage';
 import TestResultAlert from '../../components/TestResultAlert';
@@ -64,11 +67,34 @@ const PaymentSettings: React.FC = () => {
     };
   };
 
+  // 来源：本地覆盖优先级高于后端返回（点击后立刻响应，失败则回退）
+  const [sourceOverride, setSourceOverride] = useState<SettingSource>();
+  const source: SettingSource =
+    sourceOverride ?? (data?.source === 'override' ? 'override' : 'inherit');
+  const inheriting = source === 'inherit';
+
+  const handleSourceChange = async (next: SettingSource) => {
+    setSourceOverride(next);
+    try {
+      // 不传 config：只切换来源，保留自己已保存的配置
+      await saveSetting('payment', { source: next, enabled: true });
+      await queryClient.invalidateQueries({ queryKey: ['system-setting', 'payment'] });
+      message.success(next === 'inherit' ? '已切换为跟随系统' : '已切换为自定义');
+    } catch (error: any) {
+      setSourceOverride(undefined);
+      message.error(error?.message || '切换失败');
+    }
+  };
+
   const handleSave = async () => {
+    if (inheriting) {
+      message.info('当前跟随系统，无需保存；如需自定义请先切换到「自定义」');
+      return;
+    }
     try {
       setSaving(true);
       const payload = await buildPayload();
-      await saveSetting('payment', payload);
+      await saveSetting('payment', { ...payload, source });
       message.success('支付设置已保存');
       await queryClient.invalidateQueries({
         queryKey: ['system-setting', 'payment'],
@@ -137,7 +163,17 @@ const PaymentSettings: React.FC = () => {
             title="支付渠道配置"
             extra={<Tag color="blue">官方组件接入</Tag>}
           >
+            <InheritSwitch
+              source={source}
+              effectiveSource={data?.effective_source}
+              inheritAllowed={data?.inherit_allowed ?? true}
+              platformActive={data?.platform_active ?? false}
+              policyLocked={data?.policy_locked ?? false}
+              maskedFields={data?.masked_fields}
+              onChange={handleSourceChange}
+            />
             <Form
+              disabled={inheriting}
               form={form}
               layout="vertical"
               initialValues={{ enabled: true }}

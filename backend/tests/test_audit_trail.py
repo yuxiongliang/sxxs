@@ -268,11 +268,11 @@ async def test_commission_rule_changes_are_audited(client, admin_token):
     )
 
 
-async def test_tenant_suspend_and_resume_are_audited(client, admin_token):
+async def test_tenant_suspend_and_resume_are_audited(client, admin_token, platform_token):
     created = (
         await client.post(
             "/api/v1/platform/tenants",
-            headers=bearer(admin_token),
+            headers=bearer(platform_token),
             json={
                 "name": "Audit Tenant",
                 "slug": "audit-tenant",
@@ -285,7 +285,7 @@ async def test_tenant_suspend_and_resume_are_audited(client, admin_token):
 
     await client.post(
         f"/api/v1/platform/tenants/{created['id']}/suspend",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={"reason": "审计停用"},
     )
     suspended = await _logs(
@@ -295,7 +295,7 @@ async def test_tenant_suspend_and_resume_are_audited(client, admin_token):
     assert suspended[0]["after"]["reason"] == "审计停用"
 
     await client.post(
-        f"/api/v1/platform/tenants/{created['id']}/resume", headers=bearer(admin_token)
+        f"/api/v1/platform/tenants/{created['id']}/resume", headers=bearer(platform_token)
     )
     assert await _logs(client, admin_token, action="tenant.resumed", target_id=created["id"])
 
@@ -408,13 +408,13 @@ async def test_distinct_actions_endpoint(client, admin_token, customer_token, db
     assert "order.created" in response.json()["data"]
 
 
-async def test_audit_is_tenant_scoped(client, admin_token, customer_token, db_session):
+async def test_audit_is_tenant_scoped(client, admin_token, customer_token, db_session, platform_token):
     """A tenant owner must never read another tenant's audit rows."""
     await _place_order(client, customer_token, db_session)
 
     await client.post(
         "/api/v1/platform/tenants",
-        headers=bearer(admin_token),
+        headers=bearer(platform_token),
         json={
             "name": "Audit Other",
             "slug": "audit-other",

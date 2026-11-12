@@ -399,3 +399,59 @@ export async function applySeller(data: { shop_name: string; contact_phone?: str
     request('/api/v1/portal/seller/apply', { method: 'POST', data }),
   );
 }
+
+/** 公开商品橱窗（无需登录）。字段与 Portal 展示一致。 */
+export interface PublicProduct {
+  id: number;
+  seller_id: number;
+  shop_id: number;
+  name: string;
+  subtitle?: string | null;
+  status: string;
+  main_image?: string | null;
+  shop_name?: string;
+  seller_name?: string;
+  sku?: { id: number; name: string; price_cents: number; stock: number } | null;
+  /** 详情接口才有：该商品的全部 SKU */
+  skus?: Array<{
+    id: number;
+    sku_code: string;
+    name: string;
+    price_cents: number;
+    stock: number;
+  }>;
+}
+
+export async function listPublicProducts(params?: { tenant?: string; limit?: number }) {
+  return unwrap<PublicProduct[]>(
+    request('/api/v1/public/products', { method: 'GET', params }),
+  );
+}
+
+/** 公开商品详情（匿名可读，含全部 SKU）。 */
+export async function getPublicProductDetail(id: number, params?: { tenant?: string }) {
+  return unwrap<PublicProduct>(
+    request(`/api/v1/public/products/${id}`, { method: 'GET', params }),
+  );
+}
+
+/** 买家订单详情（需 order:read:self）。 */
+export interface PortalOrderDetail {
+  id: number;
+  order_no: string;
+  status: string;
+  payable_amount_cents: number;
+  seller_orders: Array<{ id: number; seller_id: number; status: string }>;
+  items: Array<{
+    product_name: string;
+    sku_name: string;
+    price_cents: number;
+    quantity: number;
+  }>;
+}
+
+export async function getPortalOrderDetail(id: number) {
+  return unwrap<PortalOrderDetail>(
+    request(`/api/v1/portal/orders/${id}`, { method: 'GET' }),
+  );
+}

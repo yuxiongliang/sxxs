@@ -9,17 +9,19 @@ from app.api.deps import get_db, require_permission
 from app.core.config import settings as app_settings
 from app.core.response import ok
 from app.services import amap as amap_service
-from app.services import setting as setting_service
+from app.services import setting_resolver
 from app.services.auth import AuthContext
 
 router = APIRouter(prefix="/amap", tags=["高德地图"])
 
 
 async def _amap_config(db: AsyncSession, tenant_id: int) -> dict:
-    """读取当前租户的高德配置（不含 platform_admin 之类的越权逻辑）。"""
-    setting = await setting_service.get_setting(db, "amap", tenant_id)
-    config = dict(setting.config or {})
-    config["enabled"] = bool(setting.enabled)
+    """读取当前租户**生效**的高德配置（可能继承自平台）。"""
+    resolved = await setting_resolver.resolve(
+        db, tenant_id, "amap", mask_secrets_in_response=False
+    )
+    config = dict(resolved.config or {})
+    config["enabled"] = bool(resolved.enabled)
     return config
 
 

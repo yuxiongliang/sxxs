@@ -2,7 +2,11 @@
 import type { RequestConfig } from '@umijs/max';
 import { getIntl, history } from '@umijs/max';
 import { message, notification } from 'antd';
-import { getAccessToken } from '@/utils/authToken';
+import { clearAccessToken } from '@/utils/authToken';
+import { getFreshAccessToken } from '@/utils/refreshToken';
+
+/** 这些端点的 401 属于业务结果（口令错误等），不该触发续期或跳登录 */
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/refresh'];
 
 // 错误处理方案： 错误类型
 enum ErrorShowType {
@@ -72,9 +76,40 @@ export const errorConfig: RequestConfig = {
           }
         }
       } else if (error.response) {
-        // Axios 的错误
-        // 请求成功发出且服务器也响应了状态码，但状态代码超出了 2xx 的范围
-        message.error(`Response status:${error.response.status}`);
+        // Axios 的错误：请求已发出、服务端也响应了，但状态码超出 2xx
+        const status: number = error.response.status;
+        const url: string = opts?.url ?? error.config?.url ?? '';
+        const isAuthEndpoint = AUTH_ENDPOINTS.some((path) =>
+          url.includes(path),
+        );
+
+        // 401：请求拦截器已经会提前续期，走到这里说明续期后仍无效
+        // （refresh token 过期 / 被吊销 / 账号停用）→ 清理态并回登录页
+        if (status === 401 && !isAuthEndpoint) {
+          clearAccessToken();
+          const { pathname, search, hash } = history.location;
+          // 公开落地页允许匿名浏览：这里只清 token，不强行跳登录
+          // 公开页（站点根与产品介绍页）允许匿名浏览：只清 token，不强行跳登录
+          const isPublicPage =
+            pathname === '/' ||
+            pathname === '/site' ||
+            pathname.startsWith('/products') ||
+            pathname === '/user/login';
+          if (!isPublicPage) {
+            message.warning(
+              getIntl().formatMessage({
+                id: 'app.request.sessionExpired',
+                defaultMessage: '登录已过期，请重新登录',
+              }),
+            );
+            history.replace(
+              `/user/login?redirect=${encodeURIComponent(pathname + search + hash)}`,
+            );
+          }
+          return;
+        }
+
+        message.error(`Response status:${status}`);
       } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
         message.error(
           getIntl().formatMessage({
@@ -93,8 +128,10 @@ export const errorConfig: RequestConfig = {
 
   // 请求拦截器
   requestInterceptors: [
-    (config: RequestOptions) => {
-      const token = getAccessToken();
+    // 异步拦截器：token 快过期时先静默续期再发请求，
+    // 这样「切回标签页触发 refetch」不会再因为过期 token 报 401。
+    async (config: RequestOptions) => {
+      const token = await getFreshAccessToken();
       if (token) {
         config.headers = {
           ...config.headers,

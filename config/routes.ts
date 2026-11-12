@@ -288,13 +288,6 @@ export default [
     component: './system/audit',
   },
   {
-    path: '/platform/tenants',
-    name: 'platform-tenants',
-    icon: 'cluster',
-    access: 'canTenantManage',
-    component: './platform/tenants',
-  },
-  {
     path: '/finance',
     name: 'finance-management',
     icon: 'accountBook',
@@ -415,6 +408,13 @@ export default [
     ],
   },
   {
+    path: '/system/brand',
+    name: 'brand',
+    icon: 'picture',
+    access: 'canBrandManage',
+    component: './system/brand',
+  },
+  {
     path: '/attachments',
     name: 'attachment-management',
     icon: 'paperClip',
@@ -440,9 +440,30 @@ export default [
     component: './portal',
   },
   {
+    path: '/products',
+    layout: false,
+    component: './products',
+  },
+  {
+    path: '/products/:id',
+    layout: false,
+    component: './products/detail',
+  },
+  // 商品详情已迁到站点前台；旧链接保留重定向，避免收藏/外链 404
+  {
     path: '/portal/products/:id',
     layout: false,
-    component: './portal/product-detail',
+    redirect: '/products/:id',
+  },
+  {
+    path: '/portal/orders',
+    layout: false,
+    component: './portal/orders',
+  },
+  {
+    path: '/portal/orders/:id',
+    layout: false,
+    component: './portal/orders/detail',
   },
   {
     path: '/portal/cart',
@@ -470,9 +491,15 @@ export default [
     layout: false,
     redirect: '/portal/seller',
   },
-  // 站点根 = 公开落地页（无需登录）
+  // 站点根 = 全新商城首页（公开）：导航为 首页 / 商品 / 赛霄玄思
   {
     path: '/',
+    layout: false,
+    component: './home',
+  },
+  // 原赛霄玄思产品介绍页（营销落地页），由新首页的「赛霄玄思」入口进入
+  {
+    path: '/site',
     layout: false,
     component: './site',
   },

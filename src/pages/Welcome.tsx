@@ -14,6 +14,9 @@ import { Link, useModel } from '@umijs/max';
 import { Button, Card, Col, Progress, Row, Space, Tag, Typography } from 'antd';
 import { getDashboardOverview } from '@/services/dashboard/api';
 
+/** 平台端是独立系统（赛霄玄思 SaaS 管理平台），这里只做跨系统跳转。 */
+const PLATFORM_CONSOLE_URL = 'http://localhost:8001/tenants';
+
 const { Title, Paragraph, Text } = Typography;
 
 const CAPABILITIES = [
@@ -51,7 +54,7 @@ const CAPABILITIES = [
     icon: <CloudServerOutlined />,
     title: 'SaaS 计费与审计',
     desc: '套餐、订阅、账单、配额与功能开关，关键操作全部落审计日志。',
-    href: '/platform/tenants',
+    href: PLATFORM_CONSOLE_URL,
   },
 ];
 
@@ -59,7 +62,7 @@ const STEPS = [
   {
     title: '确认套餐与配额',
     desc: '在「平台管理 > 租户」查看订阅状态、商品与成成员配额。',
-    href: '/platform/tenants',
+    href: PLATFORM_CONSOLE_URL,
   },
   {
     title: '邀请团队成员',

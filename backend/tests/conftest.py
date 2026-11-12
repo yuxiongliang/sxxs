@@ -146,6 +146,21 @@ async def admin_token(client) -> str:
     return (await login(client, "admin", ADMIN_PASSWORD))["access_token"]
 
 
+PLATFORM_ADMIN_USERNAME = "root"
+PLATFORM_ADMIN_PASSWORD = "Sxxs@Platform2026"
+
+
+@pytest_asyncio.fixture
+async def platform_token(client) -> str:
+    """平台端 token（aud=platform）。租户 token 打不了 /api/v1/platform/*。"""
+    response = await client.post(
+        "/api/v1/platform/auth/login",
+        json={"username": PLATFORM_ADMIN_USERNAME, "password": PLATFORM_ADMIN_PASSWORD},
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["data"]["access_token"]
+
+
 @pytest_asyncio.fixture
 async def operator_token(client) -> str:
     """`lisi` holds the operator role: no system settings, no role management."""

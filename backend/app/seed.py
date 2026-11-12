@@ -12,7 +12,7 @@ from app.models.role import Role
 from app.models.setting import SystemSetting
 from app.models.tenant import Tenant
 from app.models.user import User
-from app.seed_auth import DEMO_TENANT_SLUG, seed_auth_data
+from app.seed_auth import DEMO_TENANT_SLUG, seed_auth_data, seed_platform_admin
 from app.seed_billing import seed_billing_data
 from app.seed_commerce import seed_commerce_data, seed_commission_rule
 from app.services.setting import DEFAULT_SETTINGS
@@ -338,6 +338,7 @@ async def seed_demo_data() -> None:
 
         await db.flush()
         await seed_auth_data(db)
+        await seed_platform_admin(db)
         await seed_commerce_data(db)
         await seed_commission_rule(db)
         await seed_billing_data(db)

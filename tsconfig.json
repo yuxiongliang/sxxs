@@ -19,5 +19,8 @@
       "@root/*": ["./*"]
     }
   },
-  "include": ["./**/*.d.ts", "./**/*.ts", "./**/*.tsx"]
+  "include": ["./**/*.d.ts", "./**/*.ts", "./**/*.tsx"],
+  // apps/platform 与 packages/shared 是独立工作区：
+  // 它们各有自己的 tsconfig 与路径别名，不能被控制台的 tsc 一并检查。
+  "exclude": ["node_modules", "dist", "apps", "packages"]
 }

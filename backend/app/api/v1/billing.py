@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_context, get_db, require_permission
+from app.api.deps import get_current_context, get_db, require_platform_permission
 from app.core.response import ok
 from app.models.billing import Plan
 from app.models.tenant import Tenant
@@ -47,7 +47,7 @@ async def _get_tenant(db: AsyncSession, tenant_id: int) -> Tenant:
 @router.get("/plans", response_model=ApiResponse[list[PlanOut]])
 async def list_plans(
     include_archived: bool = Query(default=False),
-    _context=Depends(require_permission(READ)),
+    _context=Depends(require_platform_permission(READ)),
     db: AsyncSession = Depends(get_db),
 ):
     plans = await billing_service.list_plans(db, include_archived)
@@ -57,7 +57,7 @@ async def list_plans(
 @router.post("/plans", response_model=ApiResponse[PlanOut])
 async def create_plan(
     payload: PlanCreate,
-    _context=Depends(require_permission(MANAGE)),
+    _context=Depends(require_platform_permission(MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     if await billing_service.get_plan_by_code(db, payload.code) is not None:
@@ -84,7 +84,7 @@ async def create_plan(
 async def update_plan(
     plan_id: int,
     payload: PlanUpdate,
-    _context=Depends(require_permission(MANAGE)),
+    _context=Depends(require_platform_permission(MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     plan = await db.get(Plan, plan_id)
@@ -105,7 +105,7 @@ async def update_plan(
 @router.get("/tenants/{tenant_id}/subscription", response_model=ApiResponse[dict])
 async def get_tenant_subscription(
     tenant_id: int,
-    _context=Depends(require_permission(READ)),
+    _context=Depends(require_platform_permission(READ)),
     db: AsyncSession = Depends(get_db),
 ):
     await _get_tenant(db, tenant_id)
@@ -116,7 +116,7 @@ async def get_tenant_subscription(
 async def subscribe_tenant(
     tenant_id: int,
     payload: SubscribeRequest,
-    _context=Depends(require_permission(MANAGE)),
+    _context=Depends(require_platform_permission(MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     await _get_tenant(db, tenant_id)
@@ -132,7 +132,7 @@ async def subscribe_tenant(
 async def renew_tenant(
     tenant_id: int,
     payload: RenewRequest,
-    _context=Depends(require_permission(MANAGE)),
+    _context=Depends(require_platform_permission(MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     await _get_tenant(db, tenant_id)
@@ -151,7 +151,7 @@ async def renew_tenant(
 @router.get("/tenants/{tenant_id}/usage", response_model=ApiResponse[dict])
 async def tenant_usage(
     tenant_id: int,
-    _context=Depends(require_permission(READ)),
+    _context=Depends(require_platform_permission(READ)),
     db: AsyncSession = Depends(get_db),
 ):
     await _get_tenant(db, tenant_id)
@@ -167,7 +167,7 @@ async def tenant_usage(
 async def update_tenant(
     tenant_id: int,
     payload: TenantUpdateRequest,
-    _context=Depends(require_permission(MANAGE)),
+    _context=Depends(require_platform_permission(MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     tenant = await _get_tenant(db, tenant_id)
@@ -199,7 +199,7 @@ async def update_tenant(
 async def suspend_tenant(
     tenant_id: int,
     payload: TenantStatusRequest,
-    _context=Depends(require_permission(MANAGE)),
+    _context=Depends(require_platform_permission(MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     tenant = await _get_tenant(db, tenant_id)
@@ -227,7 +227,7 @@ async def suspend_tenant(
 @router.post("/tenants/{tenant_id}/resume", response_model=ApiResponse[dict])
 async def resume_tenant(
     tenant_id: int,
-    _context=Depends(require_permission(MANAGE)),
+    _context=Depends(require_platform_permission(MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     tenant = await _get_tenant(db, tenant_id)
@@ -256,7 +256,7 @@ async def resume_tenant(
 async def list_invoices(
     tenant_id: int | None = Query(default=None),
     status: str | None = Query(default=None),
-    _context=Depends(require_permission(READ)),
+    _context=Depends(require_platform_permission(READ)),
     db: AsyncSession = Depends(get_db),
 ):
     invoices = await billing_service.list_invoices(db, tenant_id, status)
@@ -266,7 +266,7 @@ async def list_invoices(
 @router.post("/invoices/{invoice_id}/pay", response_model=ApiResponse[InvoiceOut])
 async def pay_invoice(
     invoice_id: int,
-    _context=Depends(require_permission(MANAGE)),
+    _context=Depends(require_platform_permission(MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     invoice = await billing_service.pay_invoice(db, invoice_id)
@@ -275,7 +275,7 @@ async def pay_invoice(
 
 @router.post("/billing/run-cycle", response_model=ApiResponse[dict])
 async def run_billing_cycle(
-    _context=Depends(require_permission(MANAGE)),
+    _context=Depends(require_platform_permission(MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     """Run the recurring billing cycle now (renewals, invoices, dunning).
@@ -290,7 +290,7 @@ async def run_billing_cycle(
 
 @router.get("/tenants-list", response_model=ApiResponse[list[dict]])
 async def list_tenants_with_plan(
-    _context=Depends(require_permission(READ)),
+    _context=Depends(require_platform_permission(READ)),
     db: AsyncSession = Depends(get_db),
 ):
     """Tenant list enriched with plan / subscription / usage for the console."""

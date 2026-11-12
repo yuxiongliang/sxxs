@@ -12,7 +12,7 @@ test.describe('seller centre', () => {
     await page.goto('/seller');
 
     // The seller centre is a standalone page (layout:false) with a header.
-    await expect(page.getByText(/卖家中心/).first()).toBeVisible({
+    await expect(page.getByText(/我的商品/).first()).toBeVisible({
       timeout: 30_000,
     });
     await expect(page.getByText(/我的店铺|店铺/).first()).toBeVisible({

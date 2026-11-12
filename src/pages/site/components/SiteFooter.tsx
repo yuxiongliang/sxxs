@@ -2,7 +2,12 @@ import { useIntl } from '@umijs/max';
 import { Col, Row } from 'antd';
 import useStyles from '../style';
 
-export default function SiteFooter() {
+export default function SiteFooter({
+  showLinks = true,
+}: {
+  /** 纯介绍页传 false：页脚只保留品牌与版权，不出现任何跳转入口 */
+  showLinks?: boolean;
+}) {
   const { styles } = useStyles();
   const { formatMessage } = useIntl();
 
@@ -50,26 +55,31 @@ export default function SiteFooter() {
               })}
             </div>
           </Col>
-          {columns.map((column) => (
-            <Col
-              xs={12}
-              md={14 / 3}
-              key={column.title}
-              style={{ minWidth: 120 }}
-            >
-              <div className={styles.footerColTitle}>
-                {formatMessage({
-                  id: column.title,
-                  defaultMessage: column.title,
-                })}
-              </div>
-              {column.links.map((link) => (
-                <a key={link.id} className={styles.footerLink} href={link.href}>
-                  {formatMessage({ id: link.id, defaultMessage: link.id })}
-                </a>
-              ))}
-            </Col>
-          ))}
+          {showLinks &&
+            columns.map((column) => (
+              <Col
+                xs={12}
+                md={14 / 3}
+                key={column.title}
+                style={{ minWidth: 120 }}
+              >
+                <div className={styles.footerColTitle}>
+                  {formatMessage({
+                    id: column.title,
+                    defaultMessage: column.title,
+                  })}
+                </div>
+                {column.links.map((link) => (
+                  <a
+                    key={link.id}
+                    className={styles.footerLink}
+                    href={link.href}
+                  >
+                    {formatMessage({ id: link.id, defaultMessage: link.id })}
+                  </a>
+                ))}
+              </Col>
+            ))}
         </Row>
         <div className={styles.footerBottom}>
           <span>

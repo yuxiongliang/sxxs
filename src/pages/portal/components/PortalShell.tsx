@@ -1,5 +1,6 @@
 import {
   HomeOutlined,
+  ProfileOutlined,
   ShopOutlined,
   ShoppingCartOutlined,
   UserOutlined,
@@ -56,7 +57,7 @@ const PortalShell: React.FC<PortalShellProps> = ({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <Link
-            to="/portal"
+            to="/products"
             style={{ color: '#fff', fontSize: 24, fontWeight: 700 }}
           >
             <ShopOutlined /> C2C 商城
@@ -65,7 +66,10 @@ const PortalShell: React.FC<PortalShellProps> = ({
         </div>
         <Space size={20}>
           <Link to="/portal" style={{ color: '#fff' }}>
-            <HomeOutlined /> 商城首页
+            <HomeOutlined /> 个人中心
+          </Link>
+          <Link to="/portal/orders" style={{ color: '#fff' }}>
+            <ProfileOutlined /> 我的订单
           </Link>
           <Link to="/portal/cart" style={{ color: '#fff' }}>
             <Badge count={cartCount} size="small" offset={[6, -2]}>

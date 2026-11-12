@@ -12,7 +12,10 @@ router = APIRouter(prefix="/portal/seller", tags=["卖家中心"])
 
 @router.get("/application")
 async def seller_application(
-    context: AuthContext = Depends(require_permission("seller:apply")),
+    # 只返回调用者自己的开店状态，不涉及他人数据，因此不要求 seller:apply。
+    # 若在这里要求该权限，已经是店主但角色不带 seller:apply 的账号
+    # （如 operator + seller_owner）会被误判成「未开店」，看到「申请开店」。
+    context: AuthContext = Depends(get_current_context),
     db: AsyncSession = Depends(get_db),
 ):
     """当前用户的开店状态：未申请 / 审核中 / 已通过。买家页面据此决定是否显示「我的店铺」。"""

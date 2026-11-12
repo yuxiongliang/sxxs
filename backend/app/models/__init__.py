@@ -7,9 +7,11 @@ from app.models.catalog import Category, InventoryLog, Product, ProductSku
 from app.models.department import Department
 from app.models.finance import CommissionRule, LedgerEntry, Payout, SettlementBatch
 from app.models.im import Conversation, ConversationMember, ImReport, Message
+from app.models.moderation import ModerationCache, ModerationLog
 from app.models.notification import Notification
 from app.models.order import Order, OrderItem, Payment, Refund, SellerOrder, Shipment
 from app.models.permission import MemberRole, Permission, RolePermission
+from app.models.platform_setting import PlatformSetting
 from app.models.role import Role
 from app.models.seller import Seller, SellerMember, Shop
 from app.models.setting import SystemSetting
@@ -33,6 +35,8 @@ __all__ = [
     "LedgerEntry",
     "MemberRole",
     "Message",
+    "ModerationCache",
+    "ModerationLog",
     "Notification",
     "Order",
     "OrderItem",
@@ -40,6 +44,7 @@ __all__ = [
     "Payout",
     "Permission",
     "Plan",
+    "PlatformSetting",
     "Product",
     "ProductSku",
     "Refund",

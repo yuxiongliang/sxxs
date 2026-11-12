@@ -1,7 +1,120 @@
-/**
- * 落地页文案（pt-BR）
- *
- * 暂未提供该语种的正式译文，回退到英文文案，避免机翻造成语义错误。
- * 需要时把 en-US/site.ts 复制过来翻译即可，无需改动任何代码。
- */
-export { default } from '../en-US/site';
+/** Landing page / storefront copy (pt-BR) */
+export default {
+  'site.nav.features': 'Recursos',
+  'site.nav.modules': 'Módulos',
+  'site.nav.quickstart': 'Início rápido',
+  'site.nav.docs': 'Documentação',
+  'site.nav.console': 'Abrir console',
+  'site.nav.login': 'Entrar',
+  'site.nav.logout': 'Sair',
+  'site.entrance.admin': 'Console admin',
+  'site.entrance.mall': 'Marketplace',
+  'site.search.open': 'Buscar',
+  'site.search.placeholder': 'Buscar recursos, módulos ou documentação…',
+  'site.search.empty': 'Nenhum resultado',
+  'site.search.hint': '↑↓ selecionar · Enter abrir · Esc fechar',
+  'site.search.group.nav': 'Navegação',
+  'site.search.group.feature': 'Recursos',
+  'site.search.group.module': 'Módulos',
+  'site.search.group.doc': 'Documentação',
+  'site.theme.light': 'Claro',
+  'site.theme.dark': 'Escuro',
+  'site.lang.label': 'Idioma',
+  'site.hero.badge': 'Multi-tenant · Marketplace C2C · Cobrança SaaS',
+  'site.hero.title': '赛霄玄思',
+  'site.hero.subtitle':
+    'Um console de marketplace C2C multi-vendedor realmente funcional: tenants e permissões, vendedores e catálogo, pedidos e entregas, atendimento por IM, comissões, cobrança SaaS e auditoria — front-end e back-end no mesmo repositório.',
+  'site.hero.ctaConsole': 'Abrir console',
+  'site.hero.ctaPortal': 'Abrir loja',
+  'site.hero.note':
+    'Ambiente de demonstração — entre para percorrer todo o fluxo',
+  'site.stats.tables': 'Tabelas',
+  'site.stats.tests': 'Testes de back-end',
+  'site.stats.modules': 'Módulos de negócio',
+  'site.features.title': 'Recursos',
+  'site.features.subtitle':
+    'Do cadastro do vendedor ao repasse, tudo em um só sistema.',
+  'site.feature.saas.title': 'Multi-tenant e RBAC',
+  'site.feature.saas.desc':
+    'Usuários globais com vínculos por tenant, códigos de permissão e escopo de plataforma, isolamento estrito entre tenants.',
+  'site.feature.seller.title': 'Comprador vira vendedor',
+  'site.feature.seller.desc':
+    'Cadastre-se como comprador, solicite abrir uma loja e gerencie produtos, pedidos e repasses no mesmo espaço.',
+  'site.feature.trade.title': 'Vendas e entrega',
+  'site.feature.trade.desc':
+    'Um checkout dividido por vendedor; pagamento, envio, reembolso e confirmação totalmente rastreados.',
+  'site.feature.finance.title': 'Comissão e liquidação',
+  'site.feature.finance.desc':
+    'Regras de comissão por vendedor ou categoria, com período de retenção, análise de saques e lotes de liquidação.',
+  'site.feature.im.title': 'IM e moderação',
+  'site.feature.im.desc':
+    'Chat em tempo real via WebSocket, confirmação de leitura, mensagens com imagem, denúncia e remoção com evidências.',
+  'site.feature.billing.title': 'Cobrança e auditoria',
+  'site.feature.billing.desc':
+    'Planos, assinaturas, faturas, cotas e feature flags, com auditoria das ações críticas.',
+  'site.modules.title': 'Módulos',
+  'site.modules.subtitle': 'Doze módulos cobrindo a operação diária.',
+  'site.module.auth': 'Autenticação e RBAC',
+  'site.module.tenant': 'Multi-tenant',
+  'site.module.seller': 'Central do vendedor',
+  'site.module.product': 'Catálogo e estoque',
+  'site.module.order': 'Pedidos e entrega',
+  'site.module.im': 'Mensagens',
+  'site.module.finance': 'Financeiro',
+  'site.module.billing': 'Cobrança SaaS',
+  'site.module.audit': 'Log de auditoria',
+  'site.module.dashboard': 'Painel',
+  'site.module.map': 'Mapas',
+  'site.module.settings': 'Configurações',
+  'site.quickstart.title': 'Início rápido',
+  'site.quickstart.subtitle': 'Três passos para rodar o sistema.',
+  'site.quickstart.s1.title': 'Pré-requisitos',
+  'site.quickstart.s1.desc':
+    'Node.js 22+, Python 3.12+, PostgreSQL 18 e Redis.',
+  'site.quickstart.s2.title': 'Inicie o back-end',
+  'site.quickstart.s2.desc':
+    'uv sync → alembic upgrade head → uvicorn na porta 9000.',
+  'site.quickstart.s3.title': 'Inicie o front-end',
+  'site.quickstart.s3.desc':
+    'npm install e npm start; o proxy de dev encaminha a API.',
+  'site.footer.tagline': 'Console de marketplace C2C multi-tenant',
+  'site.footer.col.product': 'Produto',
+  'site.footer.col.resource': 'Recursos',
+  'site.footer.col.account': 'Conta',
+  'site.footer.link.console': 'Console',
+  'site.footer.link.portal': 'Loja',
+  'site.footer.link.seller': 'Central do vendedor',
+  'site.footer.link.docs': 'Docs de operação',
+  'site.footer.link.api': 'Referência da API',
+  'site.footer.link.readme': 'README',
+  'site.footer.link.login': 'Entrar',
+  'site.footer.link.register': 'Cadastrar',
+  'site.footer.copyright': '赛霄玄思 · Todos os direitos reservados',
+  'mall.nav.home': 'Início',
+  'mall.nav.products': 'Produtos',
+  'mall.nav.brand': '赛霄玄思',
+  'mall.hero.badge': 'Ancorar valor para mudar o mundo',
+  'mall.hero.title': 'Hub de Negócios',
+  'mall.hero.subtitle':
+    'Todo esforço merece ser visto e reconhecido; toda confiança merece respeito.',
+  'mall.hero.ctaAuth': 'Entrar / Cadastrar',
+  'mall.hero.ctaConsole': 'Abrir console',
+  'mall.stats.products': 'Produtos à venda',
+  'mall.stats.shops': 'Lojas',
+  'mall.products.title': 'Produtos',
+  'mall.products.subtitle': 'Produtos à venda dos vendedores, {count} no total',
+  'mall.products.empty': 'Ainda não há produtos à venda',
+  'mall.products.error': 'Falha ao carregar produtos, tente novamente',
+  'mall.product.stock': 'Estoque {count}',
+  'mall.product.soldOut': 'Esgotado',
+  'product.detail.notFound': 'Produto não encontrado ou fora de linha',
+  'product.detail.seller': 'Vendedor',
+  'product.detail.shop': 'Loja',
+  'product.detail.spec': 'Variante',
+  'product.detail.quantity': 'Quantidade',
+  'product.detail.buyNow': 'Comprar agora',
+  'product.detail.addCart': 'Adicionar ao carrinho',
+  'product.detail.noDescription':
+    'O vendedor ainda não escreveu uma descrição.',
+  'product.detail.addedCart': 'Adicionado ao carrinho',
+};

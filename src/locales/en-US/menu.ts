@@ -67,6 +67,7 @@ export default {
   'menu.system-settings.email': 'Email System',
   'menu.system-settings.storage': 'Storage Settings',
   'menu.system-settings.amap': 'AMap',
+  'menu.brand': 'Site Brand',
   'menu.attachment-management': 'Attachment Management',
   'menu.notification-center': 'Notification Center',
 };

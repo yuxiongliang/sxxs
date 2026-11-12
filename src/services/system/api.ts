@@ -172,9 +172,19 @@ export async function getSetting(category: string) {
   );
 }
 
+/**
+ * 保存租户设置。
+ *
+ * `config` 不传表示**只切换来源**（跟随系统/自定义），后端会保留原有配置；
+ * 否则「跟随系统」时提交的是平台脱敏值（******），会把自己的配置毁掉。
+ */
 export async function saveSetting(
   category: string,
-  data: { enabled: boolean; config: Record<string, unknown> },
+  data: {
+    source?: 'inherit' | 'override';
+    enabled: boolean;
+    config?: Record<string, unknown>;
+  },
 ) {
   return unwrap<SettingRecord>(
     request(`${API_PREFIX}/settings/${category}`, { method: 'PUT', data }),
@@ -198,6 +208,9 @@ export async function listAttachments(params: {
   pageSize?: number;
   category?: string;
   keyword?: string;
+  source_role?: string;
+  review_status?: string;
+  recycle?: boolean;
 }) {
   return unwrap<PageData<AttachmentRecord>>(
     request(`${API_PREFIX}/attachments`, { method: 'GET', params }),
@@ -225,6 +238,12 @@ export async function uploadAttachment(file: File, sourceModule = 'manual') {
 export async function deleteAttachment(id: number) {
   return unwrap<null>(
     request(`${API_PREFIX}/attachments/${id}`, { method: 'DELETE' }),
+  );
+}
+
+export async function restoreAttachment(id: number) {
+  return unwrap<AttachmentRecord>(
+    request(`${API_PREFIX}/attachments/${id}/restore`, { method: 'POST' }),
   );
 }
 
@@ -261,5 +280,32 @@ export async function sendNotification(data: {
 export async function retryNotification(id: number) {
   return unwrap<NotificationRecord>(
     request(`${API_PREFIX}/notifications/${id}/retry`, { method: 'POST' }),
+  );
+}
+
+export interface TenantBrandRecord {
+  tenant_id: number;
+  slug: string;
+  name: string;
+  display_name: string;
+  logo_url?: string | null;
+  favicon_url?: string | null;
+  theme_color?: string | null;
+}
+
+export async function getTenantBrand() {
+  return unwrap<TenantBrandRecord>(
+    request(`${API_PREFIX}/tenant/brand`, { method: 'GET' }),
+  );
+}
+
+export async function saveTenantBrand(data: {
+  display_name?: string;
+  logo_url?: string;
+  favicon_url?: string;
+  theme_color?: string;
+}) {
+  return unwrap<TenantBrandRecord>(
+    request(`${API_PREFIX}/tenant/brand`, { method: 'PUT', data }),
   );
 }

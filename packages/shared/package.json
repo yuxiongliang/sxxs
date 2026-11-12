@@ -1,0 +1,8 @@
+{
+  "name": "@sxxs/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "赛霄玄思：租户控制台与 SaaS 管理平台共用的前端基础设施",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}

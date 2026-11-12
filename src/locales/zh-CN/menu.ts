@@ -67,6 +67,7 @@ export default {
   'menu.system-settings.email': '邮件系统',
   'menu.system-settings.storage': '存储设置',
   'menu.system-settings.amap': '高德地图',
+  'menu.brand': '站点品牌',
   'menu.attachment-management': '附件管理',
   'menu.notification-center': '触达通知',
 };

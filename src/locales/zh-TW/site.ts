@@ -1,7 +1,124 @@
-/**
- * 落地页文案（zh-TW）
- *
- * 暂未提供该语种的正式译文，回退到英文文案，避免机翻造成语义错误。
- * 需要时把 en-US/site.ts 复制过来翻译即可，无需改动任何代码。
- */
-export { default } from '../en-US/site';
+/** 落地頁 / 商城首頁文案（zh-TW 正式譯文） */
+export default {
+  'site.nav.features': '平台能力',
+  'site.nav.modules': '功能模組',
+  'site.nav.quickstart': '快速開始',
+  'site.nav.docs': '文件',
+  'site.nav.console': '進入控制台',
+  'site.nav.login': '登入',
+  'site.nav.logout': '登出',
+  'site.entrance.admin': '後台管理',
+  'site.entrance.mall': '買賣中心',
+
+  'site.search.open': '搜尋',
+  'site.search.placeholder': '搜尋功能、模組或文件…',
+  'site.search.empty': '沒有符合的結果',
+  'site.search.hint': '↑↓ 選擇 · Enter 開啟 · Esc 關閉',
+  'site.search.group.nav': '導覽',
+  'site.search.group.feature': '平台能力',
+  'site.search.group.module': '功能模組',
+  'site.search.group.doc': '文件',
+
+  'site.theme.light': '亮色',
+  'site.theme.dark': '暗色',
+  'site.lang.label': '語言',
+
+  'site.hero.badge': '多租戶 · C2C 多賣家 · SaaS 計費',
+  'site.hero.title': '賽霄玄思',
+  'site.hero.subtitle':
+    '一套能真正跑起來的 C2C 多賣家商城後台：租戶與權限、賣家與商品、交易履約、IM 客服、佣金結算、SaaS 計費與稽核，前端與後端同倉庫交付。',
+  'site.hero.ctaConsole': '進入控制台',
+  'site.hero.ctaPortal': '開啟買家商城',
+  'site.hero.note': '示範環境，可直接登入體驗完整流程',
+
+  'site.stats.tables': '資料表',
+  'site.stats.tests': '後端測試',
+  'site.stats.modules': '業務模組',
+
+  'site.features.title': '平台能力',
+  'site.features.subtitle': '從註冊開店到結算撥款，閉環在同一個系統裡。',
+  'site.feature.saas.title': '多租戶與權限',
+  'site.feature.saas.desc':
+    '全域使用者 + 租戶成員模型，RBAC 權限碼與平台級作用域，跨租戶資料嚴格隔離。',
+  'site.feature.seller.title': '買家開店一體',
+  'site.feature.seller.desc':
+    '註冊即買家，可自助申請開店；審核通過後在同一個入口管理商品、訂單與結算。',
+  'site.feature.trade.title': '交易與履約',
+  'site.feature.trade.desc':
+    '一次結算依賣家拆單，付款、出貨、退款、確認收貨全流程留痕。',
+  'site.feature.finance.title': '佣金與結算',
+  'site.feature.finance.desc':
+    '佣金規則可依賣家/分類/帳期設定，凍結期、提領審核、結算批次一路到撥款。',
+  'site.feature.im.title': 'IM 與內容審核',
+  'site.feature.im.desc':
+    'WebSocket 即時會話、已讀回執、圖片訊息，違規內容檢舉後可下架並保留證據。',
+  'site.feature.billing.title': '計費與稽核',
+  'site.feature.billing.desc':
+    '方案、訂閱、帳單、配額與功能開關，關鍵操作全部寫入稽核日誌。',
+
+  'site.modules.title': '功能模組',
+  'site.modules.subtitle': '十二個模組，涵蓋日常營運。',
+  'site.module.auth': '認證與 RBAC',
+  'site.module.tenant': '多租戶',
+  'site.module.seller': '賣家中心',
+  'site.module.product': '商品與庫存',
+  'site.module.order': '訂單履約',
+  'site.module.im': '即時通訊',
+  'site.module.finance': '財務結算',
+  'site.module.billing': 'SaaS 計費',
+  'site.module.audit': '稽核日誌',
+  'site.module.dashboard': '營運看板',
+  'site.module.map': '地圖能力',
+  'site.module.settings': '系統設定',
+
+  'site.quickstart.title': '快速開始',
+  'site.quickstart.subtitle': '三步把系統跑起來。',
+  'site.quickstart.s1.title': '準備相依套件',
+  'site.quickstart.s1.desc':
+    'Node.js 22+、Python 3.12+、PostgreSQL 18 與 Redis。',
+  'site.quickstart.s2.title': '啟動後端',
+  'site.quickstart.s2.desc':
+    'uv sync → alembic upgrade head → uvicorn 起在 9000。',
+  'site.quickstart.s3.title': '啟動前端',
+  'site.quickstart.s3.desc': 'npm install → npm start，開發代理自動轉發介面。',
+
+  'site.footer.tagline': '多租戶 C2C 商城管理後台',
+  'site.footer.col.product': '產品',
+  'site.footer.col.resource': '資源',
+  'site.footer.col.account': '帳戶',
+  'site.footer.link.console': '控制台',
+  'site.footer.link.portal': '買家商城',
+  'site.footer.link.seller': '賣家中心',
+  'site.footer.link.docs': '維運文件',
+  'site.footer.link.api': '介面文件',
+  'site.footer.link.readme': '專案說明',
+  'site.footer.link.login': '登入',
+  'site.footer.link.register': '註冊',
+  'site.footer.copyright': '賽霄玄思 · 保留所有權利',
+
+  'mall.nav.home': '首頁',
+  'mall.nav.products': '商品',
+  'mall.nav.brand': '賽霄玄思',
+  'mall.hero.badge': '改變世界價值錨定',
+  'mall.hero.title': '交易Hub中心',
+  'mall.hero.subtitle': '每一份耕耘都要被看見與認可，每一份信任都值得被尊重。',
+  'mall.hero.ctaAuth': '登入 / 註冊',
+  'mall.hero.ctaConsole': '進入控制台',
+  'mall.stats.products': '在售商品',
+  'mall.stats.shops': '賣家店鋪',
+  'mall.products.title': '商品',
+  'mall.products.subtitle': '賣家發佈的在售商品，共 {count} 件',
+  'mall.products.empty': '暫時還沒有在售商品',
+  'mall.products.error': '商品載入失敗，請稍後重試',
+  'mall.product.stock': '庫存 {count}',
+  'mall.product.soldOut': '已售罄',
+  'product.detail.notFound': '商品不存在或已下架',
+  'product.detail.seller': '賣家',
+  'product.detail.shop': '店鋪',
+  'product.detail.spec': '規格',
+  'product.detail.quantity': '數量',
+  'product.detail.buyNow': '立即購買',
+  'product.detail.addCart': '加入購物車',
+  'product.detail.noDescription': '賣家暫未填寫商品描述。',
+  'product.detail.addedCart': '已加入購物車',
+};

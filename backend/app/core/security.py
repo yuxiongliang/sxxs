@@ -24,7 +24,7 @@ def create_refresh_token() -> str:
 def create_access_token(
     *,
     user_id: int,
-    tenant_id: int,
+    tenant_id: int | None,
     audience: str,
     roles: list[str],
     permission_version: int,

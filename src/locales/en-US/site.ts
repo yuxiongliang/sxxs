@@ -6,6 +6,9 @@ export default {
   'site.nav.docs': 'Docs',
   'site.nav.console': 'Open console',
   'site.nav.login': 'Sign in',
+  'site.nav.logout': 'Sign out',
+  'site.entrance.admin': 'Admin console',
+  'site.entrance.mall': 'Marketplace',
 
   'site.search.open': 'Search',
   'site.search.placeholder': 'Search capabilities, modules or docs…',
@@ -94,4 +97,33 @@ export default {
   'site.footer.link.login': 'Sign in',
   'site.footer.link.register': 'Register',
   'site.footer.copyright': 'Saixiao Xuansi · All rights reserved',
+
+  // ---- Storefront home (site root /) ----
+  'mall.nav.home': 'Home',
+  'mall.nav.products': 'Products',
+  'mall.nav.brand': 'Saixiao Xuansi',
+  'mall.hero.badge': 'Anchoring value, changing the world',
+  'mall.hero.title': 'Trading Hub',
+  'mall.hero.subtitle':
+    'Every effort deserves to be seen and recognised; every act of trust deserves respect.',
+  'mall.hero.ctaAuth': 'Sign in / Sign up',
+  'mall.hero.ctaConsole': 'Open console',
+  'mall.stats.products': 'Products on sale',
+  'mall.stats.shops': 'Shops',
+  'mall.products.title': 'Products',
+  'mall.products.subtitle': '{count} products on sale from our sellers',
+  'mall.products.empty': 'Nothing on sale yet',
+  'mall.products.error': 'Failed to load products, please try again',
+  'mall.product.stock': '{count} in stock',
+  'mall.product.soldOut': 'Sold out',
+  'product.detail.notFound': 'Product not found or off shelf',
+  'product.detail.seller': 'Seller',
+  'product.detail.shop': 'Shop',
+  'product.detail.spec': 'Variant',
+  'product.detail.quantity': 'Quantity',
+  'product.detail.buyNow': 'Buy now',
+  'product.detail.addCart': 'Add to cart',
+  'product.detail.noDescription':
+    'The seller has not written a description yet.',
+  'product.detail.addedCart': 'Added to cart',
 };
