@@ -39,11 +39,11 @@ import type {
 } from '@/services/system/types';
 import SettingPage from '../components/SettingPage';
 import {
-  GENDER_OPTIONS,
-  USER_STATUS_OPTIONS,
   formatDate,
   formatDateTime,
+  GENDER_OPTIONS,
   optionLabel,
+  USER_STATUS_OPTIONS,
 } from '../utils';
 
 const roleColor = (role: string) => {
@@ -198,6 +198,15 @@ const UserManagement: React.FC = () => {
       search: false,
       copyable: true,
       width: 200,
+    },
+    {
+      title: '用户ID',
+      dataIndex: 'public_id',
+      search: false,
+      width: 260,
+      copyable: true,
+      ellipsis: true,
+      tooltip: '全站唯一的用户编号（随机 20 位），对外展示，不随主键变化',
     },
     { title: '手机号', dataIndex: 'phone', search: false, width: 130 },
     {

@@ -3,6 +3,7 @@ from datetime import date, datetime
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.ids import new_public_id
 from app.models.base import Base, TimestampMixin
 
 
@@ -10,6 +11,10 @@ class User(Base, TimestampMixin):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    # 对外的用户编号：随机 20 位、全局唯一（唯一性由索引兜底），不随主键变化
+    public_id: Mapped[str] = mapped_column(
+        String(32), unique=True, index=True, default=lambda: new_public_id("usr")
+    )
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     nickname: Mapped[str] = mapped_column(String(64))
     email: Mapped[str] = mapped_column(String(128), unique=True, index=True)

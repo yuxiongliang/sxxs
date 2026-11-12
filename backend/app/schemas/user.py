@@ -10,6 +10,8 @@ class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    # 对外展示的用户编号（随机 20 位，全站唯一）
+    public_id: str
     username: str
     nickname: str
     email: str

@@ -4,6 +4,8 @@ export type Gender = 'male' | 'female' | 'other' | 'unknown';
 
 export interface UserRecord {
   id: number;
+  /** 对外用户编号：随机 20 位、全站唯一（与自增主键解耦） */
+  public_id: string;
   username: string;
   nickname: string;
   email: string;
