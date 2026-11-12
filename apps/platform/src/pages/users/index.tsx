@@ -15,6 +15,7 @@ import { useState } from 'react';
 import PageShell from '@/components/PageShell';
 import type { PlatformUserRecord } from '@/services/api';
 import { listPlatformUsers } from '@/services/api';
+import { labelOf, USER_ROLE, USER_STATUS } from '@/utils/labels';
 
 export default function PlatformUsersPage() {
   const [keyword, setKeyword] = useState('');
@@ -49,7 +50,7 @@ export default function PlatformUsersPage() {
       width: 140,
       render: (value: string) => (
         <Space size={4}>
-          <Tag>{value}</Tag>
+          <Tag>{labelOf(USER_ROLE, value)}</Tag>
           {value === 'platform_admin' ? <Tag color="gold">平台</Tag> : null}
         </Space>
       ),
@@ -59,7 +60,9 @@ export default function PlatformUsersPage() {
       dataIndex: 'status',
       width: 100,
       render: (value: string) => (
-        <Tag color={value === 'active' ? 'green' : 'default'}>{value}</Tag>
+        <Tag color={value === 'active' ? 'green' : 'default'}>
+          {labelOf(USER_STATUS, value)}
+        </Tag>
       ),
     },
   ];

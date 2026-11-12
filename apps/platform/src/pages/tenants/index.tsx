@@ -36,6 +36,7 @@ import {
   suspendTenant,
   updateTenant,
 } from '@/services/api';
+import { labelOf, SUBSCRIPTION_STATUS, TENANT_STATUS } from '@/utils/labels';
 import TenantDomainDrawer from './DomainDrawer';
 
 const yuan = (cents: number) => `¥${(cents / 100).toFixed(2)}`;
@@ -162,7 +163,9 @@ const PlatformTenantsPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       width: 100,
-      render: (value: string) => <Tag color={statusColor(value)}>{value}</Tag>,
+      render: (value: string) => (
+        <Tag color={statusColor(value)}>{labelOf(TENANT_STATUS, value)}</Tag>
+      ),
     },
     {
       title: '套餐',
@@ -189,7 +192,7 @@ const PlatformTenantsPage: React.FC = () => {
             {record.plan?.period === 'lifetime'
               ? '永久（买断）'
               : record.subscription
-                ? `${record.subscription.status} · 剩 ${record.days_left ?? 0} 天`
+                ? `${labelOf(SUBSCRIPTION_STATUS, record.subscription.status)} · 剩 ${record.days_left ?? 0} 天`
                 : '无订阅记录'}
           </Typography.Text>
         </Space>

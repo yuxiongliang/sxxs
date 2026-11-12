@@ -30,6 +30,7 @@ import {
   listNotificationVariables,
   saveNotificationTemplate,
 } from '@/services/api';
+import { labelOf, NOTIFICATION_CHANNEL } from '@/utils/labels';
 
 const SCOPE_META: Record<
   NotificationTemplateScope,
@@ -105,7 +106,9 @@ function TemplatePanel({ scope, variables }: TemplatePanelProps) {
       title: '渠道',
       dataIndex: 'channel',
       width: 90,
-      render: (value: string) => <Tag>{value}</Tag>,
+      render: (value: string) => (
+        <Tag>{labelOf(NOTIFICATION_CHANNEL, value)}</Tag>
+      ),
     },
     {
       title: '变量（悬停看含义）',

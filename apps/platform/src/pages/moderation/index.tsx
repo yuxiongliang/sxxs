@@ -33,6 +33,7 @@ import {
   moderationTakedown,
 } from '@/services/api';
 import { tokens } from '@/services/http';
+import { labelOf, USER_ROLE, VISIBILITY } from '@/utils/labels';
 
 const REJECT_CATEGORIES = [
   { value: 'porn', label: '涉黄' },
@@ -119,7 +120,9 @@ export default function ModerationPage() {
   const [sourceRole, setSourceRole] = useState<string>();
 
   const [reviewTarget, setReviewTarget] = useState<PlatformAttachment>();
-  const [reviewDecision, setReviewDecision] = useState<'approved' | 'rejected'>('approved');
+  const [reviewDecision, setReviewDecision] = useState<'approved' | 'rejected'>(
+    'approved',
+  );
   const [rejectCategories, setRejectCategories] = useState<string[]>([]);
   const [logsTarget, setLogsTarget] = useState<PlatformAttachment>();
 
@@ -171,7 +174,9 @@ export default function ModerationPage() {
 
   const toggleTakedown = useMutation({
     mutationFn: (record: PlatformAttachment) =>
-      record.admin_hidden ? moderationRestore(record.id) : moderationTakedown(record.id),
+      record.admin_hidden
+        ? moderationRestore(record.id)
+        : moderationTakedown(record.id),
     onSuccess: () => {
       message.success('操作成功');
       refresh();
@@ -194,7 +199,8 @@ export default function ModerationPage() {
               {record.original_name}
             </Typography.Text>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {record.mime_type} · {(record.size / 1024).toFixed(0)}KB · {record.source_module}
+              {record.mime_type} · {(record.size / 1024).toFixed(0)}KB ·{' '}
+              {record.source_module}
             </Typography.Text>
           </Space>
         ),
@@ -203,7 +209,9 @@ export default function ModerationPage() {
         title: '租户',
         width: 150,
         render: (_, record) => (
-          <Typography.Text>{record.tenant_name ?? `#${record.tenant_id}`}</Typography.Text>
+          <Typography.Text>
+            {record.tenant_name ?? `#${record.tenant_id}`}
+          </Typography.Text>
         ),
       },
       {
@@ -212,7 +220,7 @@ export default function ModerationPage() {
         render: (_, record) => (
           <Space direction="vertical" size={0}>
             <Typography.Text>{record.uploader}</Typography.Text>
-            <Tag>{record.uploader_role}</Tag>
+            <Tag>{labelOf(USER_ROLE, record.uploader_role)}</Tag>
           </Space>
         ),
       },
@@ -220,7 +228,9 @@ export default function ModerationPage() {
         title: '可见范围',
         dataIndex: 'visibility',
         width: 100,
-        render: (value: string) => <Tag color="geekblue">{value}</Tag>,
+        render: (value: string) => (
+          <Tag color="geekblue">{labelOf(VISIBILITY, value)}</Tag>
+        ),
       },
       {
         title: '审核状态',
@@ -270,7 +280,11 @@ export default function ModerationPage() {
             >
               {record.admin_hidden ? '解除下架' : '强制下架'}
             </Button>
-            <Button type="link" size="small" onClick={() => setLogsTarget(record)}>
+            <Button
+              type="link"
+              size="small"
+              onClick={() => setLogsTarget(record)}
+            >
               日志
             </Button>
           </Space>
@@ -425,7 +439,11 @@ export default function ModerationPage() {
           dataSource={logs.data ?? []}
           pagination={false}
           columns={[
-            { title: '时间', dataIndex: 'created_at', render: (v: string) => new Date(v).toLocaleString('zh-CN') },
+            {
+              title: '时间',
+              dataIndex: 'created_at',
+              render: (v: string) => new Date(v).toLocaleString('zh-CN'),
+            },
             { title: '结论', dataIndex: 'decision' },
             { title: 'provider', dataIndex: 'provider' },
             { title: '来源', dataIndex: 'source' },

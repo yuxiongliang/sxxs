@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import PageShell from '@/components/PageShell';
 import type { InvoiceRecord } from '@/services/api';
 import { listInvoices, payInvoice } from '@/services/api';
+import { INVOICE_STATUS, labelOf } from '@/utils/labels';
 
 const yuan = (cents: number) => `¥${(cents / 100).toFixed(2)}`;
 
@@ -41,7 +42,7 @@ export default function BillingInvoicesPage() {
             value === 'paid' ? 'success' : value === 'void' ? 'default' : 'gold'
           }
         >
-          {value}
+          {labelOf(INVOICE_STATUS, value)}
         </Tag>
       ),
     },
