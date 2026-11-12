@@ -25,9 +25,10 @@ async def list_users(
     status: str | None = None,
     department_id: int | None = None,
     tenant_id: int = 1,
+    public_id: str | None = None,
 ) -> tuple[list[User], int]:
     return await user_dao.list_users(
-        db, current, page_size, keyword, role, status, department_id, tenant_id
+        db, current, page_size, keyword, role, status, department_id, tenant_id, public_id
     )
 
 

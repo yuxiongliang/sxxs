@@ -29,6 +29,8 @@ export async function listUsers(params: {
   role?: string;
   status?: string;
   department_id?: number;
+  /** 用户编号，精确匹配 */
+  public_id?: string;
 }) {
   return unwrap<PageData<UserRecord>>(
     request(`${API_PREFIX}/users`, { method: 'GET', params }),

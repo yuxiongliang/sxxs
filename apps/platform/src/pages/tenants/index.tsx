@@ -210,9 +210,11 @@ const PlatformTenantsPage: React.FC = () => {
             }}
           />
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {record.subscription
-              ? `${record.subscription.status} · 剩 ${record.days_left ?? 0} 天`
-              : '无订阅记录'}
+            {record.plan?.period === 'lifetime'
+              ? '永久（买断）'
+              : record.subscription
+                ? `${record.subscription.status} · 剩 ${record.days_left ?? 0} 天`
+                : '无订阅记录'}
           </Typography.Text>
         </Space>
       ),

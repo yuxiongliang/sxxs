@@ -23,11 +23,20 @@ async def list_users(
     role: str | None = None,
     status: str | None = None,
     department_id: int | None = None,
+    public_id: str | None = Query(default=None, max_length=32, description="用户编号，精确匹配"),
     context: AuthContext = Depends(get_current_context),
     db: AsyncSession = Depends(get_db),
 ):
     items, total = await user_service.list_users(
-        db, current, pageSize, keyword, role, status, department_id, context.tenant.id
+        db,
+        current,
+        pageSize,
+        keyword,
+        role,
+        status,
+        department_id,
+        context.tenant.id,
+        public_id,
     )
     return ok(page_data([UserOut.model_validate(item) for item in items], total, current, pageSize))
 

@@ -202,7 +202,9 @@ const UserManagement: React.FC = () => {
     {
       title: '用户ID',
       dataIndex: 'public_id',
-      search: false,
+      // 精确查询：ProTable 会把输入值作为 public_id 参数传给后端（走唯一索引）
+      search: true,
+      fieldProps: { placeholder: '粘贴用户ID精确查询' },
       width: 260,
       copyable: true,
       ellipsis: true,

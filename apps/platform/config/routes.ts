@@ -43,6 +43,11 @@ export default [
         name: 'billingInvoices',
         component: './billing/invoices',
       },
+      {
+        path: '/billing/commission',
+        name: 'billingCommission',
+        component: './billing/commission',
+      },
     ],
   },
   // 租户概览已合并进租户列表，旧链接仍可用

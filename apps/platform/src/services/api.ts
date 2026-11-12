@@ -474,6 +474,33 @@ export const updateServiceCategory = (
   },
 ) => apiPut<ServiceCategoryRecord>(`/platform/service-categories/${id}`, data);
 
+export interface CommissionRow {
+  tenant_id: number;
+  tenant_name: string;
+  tenant_slug: string;
+  service_category: { id: number; name: string; commission_bps: number } | null;
+  plan_period: string | null;
+  waived: boolean;
+  gmv_cents: number;
+  rate_bps: number;
+  commission_cents: number;
+}
+
+export interface CommissionReport {
+  month: string;
+  window_start: string;
+  window_end: string;
+  total_gmv_cents: number;
+  total_commission_cents: number;
+  rows: CommissionRow[];
+}
+
+/** 按月抽佣台账（只读）：基数=当月已支付 GMV；买断/自定义档期租户 waived、抽佣为 0 */
+export const getCommissionReport = (month?: string) =>
+  apiGet<CommissionReport>(
+    `/platform/commission-report${month ? `?month=${month}` : ''}`,
+  );
+
 export const assignTenantCategory = (tenantId: number, categoryId: number | null) =>
   apiPut<{ tenant_id: number; service_category_id: number | null }>(
     `/platform/tenants/${tenantId}/service-category`,

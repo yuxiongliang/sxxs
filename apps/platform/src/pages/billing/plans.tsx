@@ -176,7 +176,11 @@ export default function BillingPlansPage() {
             onClick={() => {
               setEditing(null);
               form.resetFields();
-              form.setFieldsValue({ price_yuan: 0, duration_months: 12 });
+              // 默认留空 = 永久买断（买断不留试用）；要限期套餐再填月数
+              form.setFieldsValue({
+                price_yuan: 0,
+                duration_months: undefined,
+              });
               setOpen(true);
             }}
           >

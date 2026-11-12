@@ -14,6 +14,7 @@ async def list_users(
     status: str | None = None,
     department_id: int | None = None,
     tenant_id: int | None = None,
+    public_id: str | None = None,
 ) -> tuple[list[User], int]:
     conditions = []
     if tenant_id is not None:
@@ -33,8 +34,13 @@ async def list_users(
                 User.nickname.ilike(like),
                 User.email.ilike(like),
                 User.phone.ilike(like),
+                # 关键词里粘贴用户编号也能搜到
+                User.public_id.ilike(like),
             )
         )
+    if public_id:
+        # 用户编号是精确值（唯一索引），不做模糊匹配
+        conditions.append(User.public_id == public_id.strip())
     if role:
         conditions.append(User.role == role)
     if status:
