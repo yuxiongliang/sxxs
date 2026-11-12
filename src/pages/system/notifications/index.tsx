@@ -7,7 +7,6 @@ import {
   MessageOutlined,
   NotificationOutlined,
   ReloadOutlined,
-  SendOutlined,
 } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -15,9 +14,6 @@ import {
   Button,
   Card,
   Col,
-  DatePicker,
-  Form,
-  Input,
   Row,
   Select,
   Space,
@@ -26,14 +22,13 @@ import {
   Tabs,
   Tag,
 } from 'antd';
+import { Alert } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
 import React, { useState } from 'react';
 import {
   getNotificationStats,
   listNotifications,
   retryNotification,
-  sendNotification,
 } from '@/services/system/api';
 import type { NotificationRecord } from '@/services/system/types';
 import SettingPage from '../components/SettingPage';
@@ -62,9 +57,7 @@ const channelIcon = (channel: string) => {
 const NotificationsPage: React.FC = () => {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
-  const [form] = Form.useForm();
-  const [activeTab, setActiveTab] = useState('send');
-  const [sending, setSending] = useState(false);
+  const [activeTab, setActiveTab] = useState('records');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [channel, setChannel] = useState<string>('all');
@@ -85,33 +78,7 @@ const NotificationsPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['notification-stats'] });
   };
 
-  const handleSend = async () => {
-    try {
-      const values = await form.validateFields();
-      setSending(true);
-      await sendNotification({
-        title: values.title,
-        channel: values.channel,
-        template: values.template,
-        audience: values.audience,
-        content: values.content,
-        scheduled_at: values.scheduledAt
-          ? values.scheduledAt.toISOString()
-          : undefined,
-      });
-      message.success('通知已提交发送');
-      form.resetFields();
-      refresh();
-      setActiveTab('records');
-    } catch (error: any) {
-      if (error?.errorFields) return;
-      message.error(error?.message || '发送失败');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleRetry = async (record: NotificationRecord) => {
+const handleRetry = async (record: NotificationRecord) => {
     try {
       await retryNotification(record.id);
       message.success('已重新发送');
@@ -194,7 +161,7 @@ const NotificationsPage: React.FC = () => {
   return (
     <SettingPage
       title="触达通知"
-      subTitle="短信、邮件、站内信统一发送与记录"
+      subTitle="通知模板由平台统一管理 · 这里查看发送记录与渠道开关"
       icon={<NotificationOutlined />}
       extra={
         <Button icon={<ReloadOutlined />} onClick={refresh}>
@@ -202,6 +169,13 @@ const NotificationsPage: React.FC = () => {
         </Button>
       }
     >
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        title="通知模板由平台统一管理"
+        description="平台负责模板与渠道策略；租户侧只保留发送记录、可用模板说明与渠道开关。站内信为强制渠道（欠费/安全类通知），不可关闭。"
+      />
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={12} md={6}>
           <Card>
@@ -249,88 +223,7 @@ const NotificationsPage: React.FC = () => {
           activeKey={activeTab}
           onChange={setActiveTab}
           items={[
-            {
-              key: 'send',
-              label: '发送通知',
-              children: (
-                <Form
-                  form={form}
-                  layout="vertical"
-                  style={{ maxWidth: 720 }}
-                  initialValues={{ channel: 'inbox', audience: 'all' }}
-                >
-                  <Form.Item
-                    label="通知标题"
-                    name="title"
-                    rules={[{ required: true, message: '请输入通知标题' }]}
-                  >
-                    <Input placeholder="例如：新版本上线通知" />
-                  </Form.Item>
-                  <Row gutter={16}>
-                    <Col span={8}>
-                      <Form.Item
-                        label="触达渠道"
-                        name="channel"
-                        rules={[{ required: true }]}
-                      >
-                        <Select
-                          options={CHANNEL_OPTIONS.map(({ label, value }) => ({
-                            label,
-                            value,
-                          }))}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item
-                        label="受众范围"
-                        name="audience"
-                        rules={[{ required: true }]}
-                      >
-                        <Select options={AUDIENCE_OPTIONS} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item label="模板标识" name="template">
-                        <Input placeholder="SYSTEM_RELEASE" />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  <Form.Item
-                    label="通知内容"
-                    name="content"
-                    rules={[{ required: true, message: '请输入通知内容' }]}
-                  >
-                    <Input.TextArea
-                      rows={5}
-                      placeholder="请输入要发送的通知内容..."
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    label="定时发送"
-                    name="scheduledAt"
-                    extra="留空表示立即发送"
-                  >
-                    <DatePicker
-                      showTime
-                      style={{ width: 260 }}
-                      disabledDate={(current) =>
-                        current && current < dayjs().startOf('day')
-                      }
-                    />
-                  </Form.Item>
-                  <Button
-                    type="primary"
-                    icon={<SendOutlined />}
-                    loading={sending}
-                    onClick={handleSend}
-                  >
-                    提交发送
-                  </Button>
-                </Form>
-              ),
-            },
-            {
+{
               key: 'records',
               label: '发送记录',
               children: (
