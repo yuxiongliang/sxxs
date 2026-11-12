@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, require_platform_permission
+from app.core.cors import invalidate_host_cache
 from app.core.response import ok
 from app.models.tenant import Tenant, TenantDomain
 from app.schemas.platform import TenantDomainCreate
@@ -84,6 +85,7 @@ async def create_tenant_domain(
         raise HTTPException(status_code=_status_for(exc), detail=str(exc)) from exc
     await db.commit()
     await db.refresh(domain)
+    invalidate_host_cache()
     return ok(_payload(domain), '域名已绑定')
 
 
@@ -104,6 +106,7 @@ async def verify_tenant_domain(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     await db.commit()
     await db.refresh(domain)
+    invalidate_host_cache()
     return ok(_payload(domain))
 
 
@@ -119,4 +122,5 @@ async def delete_tenant_domain(
     except tenant_domains.TenantDomainError as exc:
         raise HTTPException(status_code=_status_for(exc), detail=str(exc)) from exc
     await db.commit()
+    invalidate_host_cache()
     return ok(None, '域名已解绑')

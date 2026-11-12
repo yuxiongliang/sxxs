@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Cookie, Depends, Response
+from fastapi import APIRouter, Cookie, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_context, get_db
@@ -7,6 +7,7 @@ from app.core.response import ok
 from app.schemas.auth import AuthResponse, LoginRequest, MeResponse, RegisterRequest
 from app.schemas.common import ApiResponse
 from app.services import auth as auth_service
+from app.services import tenant_domains
 
 router = APIRouter(prefix="/auth", tags=["认证"])
 
@@ -56,13 +57,20 @@ async def me(context=Depends(get_current_context)):
 
 @router.post("/refresh", response_model=ApiResponse[AuthResponse])
 async def refresh(
+    request: Request,
     response: Response,
     refresh_token: str | None = Cookie(default=None, alias="antd_pro_refresh"),
     db: AsyncSession = Depends(get_db),
 ):
     if not refresh_token:
         raise auth_service.HTTPException(status_code=401, detail="登录已过期")
-    result = await auth_service.refresh(db, refresh_token)
+    # B6：refresh token 只能在它自己的站点域名下续期（Host 解析不出来时不限制）
+    host_tenant = await tenant_domains.tenant_by_host(
+        db, tenant_domains.normalize_request_host(request.headers.get("host"))
+    )
+    result = await auth_service.refresh(
+        db, refresh_token, expected_tenant_id=host_tenant.id if host_tenant else None
+    )
     new_token = result.pop("refresh_token")
     _set_refresh_cookie(response, new_token)
     return ok(AuthResponse.model_validate(result), "已刷新")

@@ -165,6 +165,29 @@ async def test_subdomain_comes_from_base_domain_and_is_active(db_session, demo_t
         )
 
 
+async def test_refresh_cookie_cannot_be_replayed_on_another_tenant_host(
+    client, db_session
+):
+    """A 站拿到的 refresh token 搬到 B 站域名下必须拒绝，且不消耗这个 token。"""
+    login = await client.post(
+        "/api/v1/auth/login", json={"username": "admin", "password": "ant.design"}
+    )
+    assert login.status_code == 200, login.text
+
+    other = await _make_tenant(db_session, "other-market", "别家市场")
+    await _bind(db_session, other, "other.example.com")
+
+    rejected = await client.post("/api/v1/auth/refresh", headers={"host": "other.example.com"})
+    assert rejected.status_code == 401, rejected.text
+
+    # 提示语与「过期」一致：不告诉对方是被站点域名拦下的
+    assert rejected.json()["message"] == "登录已过期"
+
+    # 换回自己的域名（或解析不出租户的 Host）仍可续期 —— 上面那次不能消耗 token
+    accepted = await client.post("/api/v1/auth/refresh", headers={"host": "testserver"})
+    assert accepted.status_code == 200, accepted.text
+
+
 async def test_amap_proxy_resolves_tenant_from_host(db_session, demo_tenant):
     await _bind(db_session, demo_tenant, "shop.example.com")
 

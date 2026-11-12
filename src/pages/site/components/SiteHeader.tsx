@@ -208,7 +208,8 @@ export default function SiteHeader({
   };
 
   // 站点品牌：匿名公开接口。
-  // B6（自定义域名）上线后这里要改成按 Host 解析租户；当前站点只服务 demo 租户。
+  // 租户由后端按请求 Host 解析（B6），前端不再传 tenant 参数 ——
+  // 本地开发时 Host 解析不出租户，后端会兜底到 demo（TENANT_HOST_FALLBACK）。
   const [brand, setBrand] = useState<{
     display_name: string;
     logo_url?: string | null;
@@ -216,7 +217,7 @@ export default function SiteHeader({
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/v1/public/brand?tenant=demo')
+    fetch('/api/v1/public/brand')
       .then((response) => (response.ok ? response.json() : null))
       .then((body) => {
         if (!cancelled && body?.data) setBrand(body.data);

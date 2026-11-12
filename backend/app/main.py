@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -11,6 +10,7 @@ from app.api.proxy_amap import router as proxy_amap_router
 from app.api.v1.router import api_router
 from app.core import billing_scheduler, im_bus
 from app.core.config import settings
+from app.core.cors import TenantCORSMiddleware
 from app.core.db import engine
 from app.core.migrations import ensure_schema_at_head
 from app.core.rate_limit import RateLimitMiddleware
@@ -74,8 +74,9 @@ async def request_metadata(request: Request, call_next):
 
 
 app.add_middleware(RateLimitMiddleware)
+# 静态来源（本地开发端口）+ 运行期解析出的租户域名，见 app/core/cors.py
 app.add_middleware(
-    CORSMiddleware,
+    TenantCORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
