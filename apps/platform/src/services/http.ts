@@ -81,3 +81,6 @@ export const apiPost = <T>(path: string, data?: unknown) =>
 
 export const apiPut = <T>(path: string, data?: unknown) =>
   requestJson<T>(path, { method: 'PUT', body: JSON.stringify(data) });
+
+export const apiDelete = <T>(path: string) =>
+  requestJson<T>(path, { method: 'DELETE' });

@@ -29,10 +29,10 @@ from app.services import domain_verifier
 from app.services.public_catalog import DEFAULT_TENANT_SLUG, resolve_tenant
 
 MAX_HOST_LENGTH = 253
-VERIFY_RECORD_PREFIX = '_sxxs-verify'
-VERIFY_VALUE_PREFIX = 'sxxs-verify='
-DOMAIN_KINDS = frozenset({'subdomain', 'custom'})
-LOCAL_HOSTS = frozenset({'localhost', '127.0.0.1', '0.0.0.0', '::1'})
+VERIFY_RECORD_PREFIX = "_sxxs-verify"
+VERIFY_VALUE_PREFIX = "sxxs-verify="
+DOMAIN_KINDS = frozenset({"subdomain", "custom"})
+LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "0.0.0.0", "::1"})
 
 
 class TenantDomainError(Exception):
@@ -55,24 +55,28 @@ class DomainNotFoundError(TenantDomainError):
     pass
 
 
+class VerifierUnavailableError(TenantDomainError):
+    """没有可用的 DNS 校验器（provider=none 或 dnspython 未安装）。"""
+
+
 def normalize_host(value: str | None) -> str:
     """把 Host 头或用户输入规整成可比较的形式。
 
     * 去掉端口与路径；小写；去掉结尾的点（demo.example.com. 是合法 FQDN）；
     * 非 ASCII 域名转 punycode —— 否则「例え.jp」和 xn-- 形式会被当成两个域名。
     """
-    host = (value or '').strip().lower()
+    host = (value or "").strip().lower()
     if not host:
-        return ''
-    if host.startswith('['):  # IPv6 字面量：[::1]:8000
-        return host[1 : host.index(']')] if ']' in host else host
-    host = host.split('/', 1)[0].rsplit(':', 1)[0].rstrip('.')
+        return ""
+    if host.startswith("["):  # IPv6 字面量：[::1]:8000
+        return host[1 : host.index("]")] if "]" in host else host
+    host = host.split("/", 1)[0].rsplit(":", 1)[0].rstrip(".")
     if not host:
-        return ''
+        return ""
     try:
-        return host.encode('idna').decode('ascii')
+        return host.encode("idna").decode("ascii")
     except UnicodeError as exc:
-        raise InvalidHostError('域名格式不合法') from exc
+        raise InvalidHostError("域名格式不合法") from exc
 
 
 def normalize_request_host(value: str | None) -> str:
@@ -80,7 +84,7 @@ def normalize_request_host(value: str | None) -> str:
     try:
         return normalize_host(value)
     except InvalidHostError:
-        return ''
+        return ""
 
 
 def is_reserved_host(host: str) -> bool:
@@ -98,11 +102,11 @@ def is_reserved_host(host: str) -> bool:
 
 def verification_record_name(host: str) -> str:
     """TXT 记录挂在 _sxxs-verify.<host>：不占用对方主域的其他记录。"""
-    return f'{VERIFY_RECORD_PREFIX}.{host}'
+    return f"{VERIFY_RECORD_PREFIX}.{host}"
 
 
 def verification_value(token: str) -> str:
-    return f'{VERIFY_VALUE_PREFIX}{token}'
+    return f"{VERIFY_VALUE_PREFIX}{token}"
 
 
 async def tenant_by_host(db: AsyncSession, host: str) -> Tenant | None:
@@ -115,8 +119,8 @@ async def tenant_by_host(db: AsyncSession, host: str) -> Tenant | None:
             .join(TenantDomain, TenantDomain.tenant_id == Tenant.id)
             .where(
                 TenantDomain.host == host,
-                TenantDomain.status == 'active',
-                Tenant.status == 'active',
+                TenantDomain.status == "active",
+                Tenant.status == "active",
             )
         )
     ).first()
@@ -126,52 +130,52 @@ async def resolve_public_tenant(
     db: AsyncSession, request: Request, slug_hint: str | None = None
 ) -> Tenant:
     """公开接口的租户解析：Host 优先，兜底可关；解析不出来一律 404（不泄露存在性）。"""
-    tenant = await tenant_by_host(db, normalize_request_host(request.headers.get('host')))
+    tenant = await tenant_by_host(db, normalize_request_host(request.headers.get("host")))
     if tenant is not None:
         return tenant
     if not settings.tenant_host_fallback:
-        raise HTTPException(status_code=404, detail='站点不存在或已停用')
-    slug = (slug_hint or '').strip() or DEFAULT_TENANT_SLUG
+        raise HTTPException(status_code=404, detail="站点不存在或已停用")
+    slug = (slug_hint or "").strip() or DEFAULT_TENANT_SLUG
     return await resolve_tenant(db, slug)
 
 
 def _validate_host(host: str, tenant: Tenant, kind: str) -> str:
     if not host:
-        raise InvalidHostError('域名不能为空')
+        raise InvalidHostError("域名不能为空")
     if len(host) > MAX_HOST_LENGTH:
-        raise InvalidHostError('域名过长')
+        raise InvalidHostError("域名过长")
     if is_reserved_host(host):
-        raise ReservedHostError('该域名属于基础设施，不能绑定给租户')
-    if '.' not in host:
-        raise InvalidHostError('需要完整域名（含后缀）')
-    if kind == 'subdomain':
+        raise ReservedHostError("该域名属于基础设施，不能绑定给租户")
+    if "." not in host:
+        raise InvalidHostError("需要完整域名（含后缀）")
+    if kind == "subdomain":
         base = normalize_host(settings.tenant_base_domain)
         if not base:
-            raise InvalidHostError('未配置 tenant_base_domain，无法创建子域')
-        if host != f'{tenant.slug}.{base}':
-            raise InvalidHostError('子域只允许形如 <slug>.<租户基域>')
+            raise InvalidHostError("未配置 tenant_base_domain，无法创建子域")
+        if host != f"{tenant.slug}.{base}":
+            raise InvalidHostError("子域只允许形如 <slug>.<租户基域>")
     return host
 
 
 async def add_domain(
-    db: AsyncSession, tenant: Tenant, host: str, kind: str = 'custom'
+    db: AsyncSession, tenant: Tenant, host: str, kind: str = "custom"
 ) -> TenantDomain:
     """新增域名。子域创建即 active；自定义域名停在 pending 等 TXT 验证。"""
     if kind not in DOMAIN_KINDS:
-        raise InvalidHostError('域名类型不合法')
+        raise InvalidHostError("域名类型不合法")
     normalized = _validate_host(normalize_host(host), tenant, kind)
     existing = (
         await db.scalars(select(TenantDomain).where(TenantDomain.host == normalized))
     ).first()
     if existing is not None:
-        raise DomainConflictError('该域名已被占用')
+        raise DomainConflictError("该域名已被占用")
 
-    is_subdomain = kind == 'subdomain'
+    is_subdomain = kind == "subdomain"
     domain = TenantDomain(
         tenant_id=tenant.id,
         host=normalized,
         kind=kind,
-        status='active' if is_subdomain else 'pending',
+        status="active" if is_subdomain else "pending",
         verify_token=None if is_subdomain else secrets.token_urlsafe(24),
         verified_at=datetime.now(UTC) if is_subdomain else None,
     )
@@ -182,17 +186,22 @@ async def add_domain(
 
 async def verify_domain(db: AsyncSession, domain: TenantDomain) -> TenantDomain:
     """按 TXT 记录判定所有权：只有唯一凭证命中才转 active，否则记 failed。"""
-    if domain.status == 'active':
+    if domain.status == "active":
         return domain
-    expected = verification_value(domain.verify_token or '')
-    records = await domain_verifier.get_verifier().txt_records(
-        verification_record_name(domain.host)
-    )
+
+    verifier = domain_verifier.get_verifier()
+    if isinstance(verifier, domain_verifier.NullVerifier):
+        # 没有校验器就不判定：直接标 failed 会让人以为是客户配错了，
+        # 实际是我们这边没开校验。
+        raise VerifierUnavailableError('未配置域名校验器（DOMAIN_VERIFY_PROVIDER）')
+
+    expected = verification_value(domain.verify_token or "")
+    records = await verifier.txt_records(verification_record_name(domain.host))
     if domain.verify_token and expected in records:
-        domain.status = 'active'
+        domain.status = "active"
         domain.verified_at = datetime.now(UTC)
     else:
-        domain.status = 'failed'
+        domain.status = "failed"
     await db.flush()
     return domain
 
@@ -218,7 +227,7 @@ async def get_domain(db: AsyncSession, tenant_id: int, domain_id: int) -> Tenant
         )
     ).first()
     if domain is None:
-        raise DomainNotFoundError('域名不存在')
+        raise DomainNotFoundError("域名不存在")
     return domain
 
 
@@ -233,10 +242,8 @@ async def ensure_tenant_subdomain(db: AsyncSession, tenant: Tenant) -> TenantDom
     base = normalize_host(settings.tenant_base_domain)
     if not base:
         return None
-    host = f'{tenant.slug}.{base}'
-    existing = (
-        await db.scalars(select(TenantDomain).where(TenantDomain.host == host))
-    ).first()
+    host = f"{tenant.slug}.{base}"
+    existing = (await db.scalars(select(TenantDomain).where(TenantDomain.host == host))).first()
     if existing is not None:
         return existing
-    return await add_domain(db, tenant, host, kind='subdomain')
+    return await add_domain(db, tenant, host, kind="subdomain")

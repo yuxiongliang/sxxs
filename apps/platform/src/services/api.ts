@@ -1,5 +1,5 @@
 /** 平台端业务接口。全部要求 aud=platform 的 token。 */
-import { apiGet, apiPost, apiPut } from './http';
+import { apiDelete, apiGet, apiPost, apiPut } from './http';
 
 export interface PlatformAuthUser {
   id: number;
@@ -380,8 +380,46 @@ export interface TenantOverviewRecord {
   status: string;
   brand: { display_name: string; customized: boolean; has_logo: boolean };
   payment: { source: string; configured: boolean };
-  domain: { supported: boolean; note: string };
+  domain: {
+    supported: boolean;
+    primary_host: string | null;
+    active: number;
+    pending: number;
+    total: number;
+  };
 }
 
 export const listTenantOverview = () =>
   apiGet<TenantOverviewRecord[]>('/platform/overview/tenants');
+
+// ---------------------------------------------------------------------------
+// 租户域名（B6）：自有子域创建即 active；客户自带域名要按 TXT 验证所有权
+// ---------------------------------------------------------------------------
+
+export interface TenantDomainRecord {
+  id: number;
+  tenant_id: number;
+  host: string;
+  kind: 'subdomain' | 'custom';
+  status: 'pending' | 'active' | 'failed' | 'disabled';
+  is_primary: boolean;
+  verified_at: string | null;
+  /** 自定义域名才有：让运营直接复制给客户的 TXT 记录 */
+  dns_record?: { type: 'TXT'; name: string; value: string };
+}
+
+export const listTenantDomains = (tenantId: number) =>
+  apiGet<TenantDomainRecord[]>(`/platform/tenants/${tenantId}/domains`);
+
+export const createTenantDomain = (
+  tenantId: number,
+  data: { host: string; kind?: 'subdomain' | 'custom' },
+) => apiPost<TenantDomainRecord>(`/platform/tenants/${tenantId}/domains`, data);
+
+export const verifyTenantDomain = (tenantId: number, domainId: number) =>
+  apiPost<TenantDomainRecord>(
+    `/platform/tenants/${tenantId}/domains/${domainId}/verify`,
+  );
+
+export const deleteTenantDomain = (tenantId: number, domainId: number) =>
+  apiDelete<null>(`/platform/tenants/${tenantId}/domains/${domainId}`);

@@ -43,7 +43,9 @@ async def test_overview_reports_brand_and_payment_state(client, admin_token, pla
     assert demo["brand"]["customized"] is True
     assert demo["payment"]["configured"] is True
     assert demo["payment"]["source"] == "override"
-    assert demo["domain"]["supported"] is False
+    assert demo["domain"]["supported"] is True, "B6 上线后域名恒为支持，具体看计数"
+    assert demo["domain"]["total"] == 0
+    assert demo["domain"]["primary_host"] is None
 
 
 async def test_overview_requires_platform_token(client, admin_token):

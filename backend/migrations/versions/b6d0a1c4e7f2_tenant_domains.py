@@ -56,9 +56,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_tenant_domains_tenant_id"), "tenant_domains", ["tenant_id"])
-    op.create_index(
-        op.f("ix_tenant_domains_host"), "tenant_domains", ["host"], unique=True
-    )
+    op.create_index(op.f("ix_tenant_domains_host"), "tenant_domains", ["host"], unique=True)
     op.create_index(op.f("ix_tenant_domains_status"), "tenant_domains", ["status"])
 
 

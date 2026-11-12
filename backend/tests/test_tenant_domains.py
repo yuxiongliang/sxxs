@@ -32,15 +32,15 @@ async def demo_tenant(db_session):
     return (await db_session.scalars(select(Tenant).where(Tenant.slug == "demo"))).first()
 
 
-async def _make_tenant(db_session, slug: str, name: str, status: str = 'active') -> Tenant:
+async def _make_tenant(db_session, slug: str, name: str, status: str = "active") -> Tenant:
     tenant = Tenant(name=name, slug=slug, status=status)
     db_session.add(tenant)
     await db_session.flush()
     return tenant
 
 
-async def _bind(db_session, tenant: Tenant, host: str, status: str = 'active'):
-    domain = TenantDomain(tenant_id=tenant.id, host=host, kind='custom', status=status)
+async def _bind(db_session, tenant: Tenant, host: str, status: str = "active"):
+    domain = TenantDomain(tenant_id=tenant.id, host=host, kind="custom", status=status)
     db_session.add(domain)
     await db_session.flush()
     return domain
@@ -57,7 +57,7 @@ class _HostRequest:
     """只带 Host 头的假 Request：_tenant_id_for_host 只读 request.headers。"""
 
     def __init__(self, host: str) -> None:
-        self.headers = {'host': host}
+        self.headers = {"host": host}
 
 
 def test_normalize_host_strips_port_path_case_and_trailing_dot():
@@ -66,7 +66,7 @@ def test_normalize_host_strips_port_path_case_and_trailing_dot():
     assert normalize_host("demo.example.com/api/v1") == "demo.example.com"
     assert normalize_host("[::1]:8000") == "::1"
     assert normalize_host("") == ""
-    assert normalize_host(None) == ''
+    assert normalize_host(None) == ""
 
 
 def test_normalize_host_punycodes_idn():
@@ -94,7 +94,7 @@ async def test_unverified_domain_does_not_resolve_then_txt_verifies(
     monkeypatch.setattr(settings, "tenant_host_fallback", False)
     monkeypatch.setattr(settings, "domain_verify_provider", "static")
     domain = await tenant_domains.add_domain(db_session, demo_tenant, "shop.example.com")
-    assert domain.status == 'pending'
+    assert domain.status == "pending"
     assert domain.verify_token
 
     pending = await client.get("/api/v1/public/brand", headers={"host": "shop.example.com"})
@@ -106,7 +106,7 @@ async def test_unverified_domain_does_not_resolve_then_txt_verifies(
         [tenant_domains.verification_value(domain.verify_token)],
     )
     await tenant_domains.verify_domain(db_session, domain)
-    assert domain.status == 'active'
+    assert domain.status == "active"
     assert domain.verified_at is not None
 
     active = await client.get("/api/v1/public/brand", headers={"host": "shop.example.com"})
@@ -120,11 +120,11 @@ async def test_wrong_txt_marks_domain_failed(db_session, demo_tenant, monkeypatc
     verifier = _static_verifier()
     verifier.set_records(
         tenant_domains.verification_record_name("wrong.example.com"),
-        ['sxxs-verify=not-the-token'],
+        ["sxxs-verify=not-the-token"],
     )
     await tenant_domains.verify_domain(db_session, domain)
-    assert domain.status == 'failed'
-    verifier.set_records(tenant_domains.verification_record_name('wrong.example.com'), [])
+    assert domain.status == "failed"
+    verifier.set_records(tenant_domains.verification_record_name("wrong.example.com"), [])
 
 
 async def test_suspended_tenant_domain_does_not_resolve(client, db_session, monkeypatch):
@@ -147,14 +147,12 @@ async def test_host_beats_tenant_query_param_and_isolates_tenants(client, db_ses
     assert response.json()["data"]["slug"] == "other-market"
 
 
-async def test_subdomain_comes_from_base_domain_and_is_active(
-    db_session, demo_tenant, monkeypatch
-):
+async def test_subdomain_comes_from_base_domain_and_is_active(db_session, demo_tenant, monkeypatch):
     monkeypatch.setattr(settings, "tenant_base_domain", "com.sxxs.cn")
     domain = await tenant_domains.ensure_tenant_subdomain(db_session, demo_tenant)
     assert domain is not None
     assert domain.host == "demo.com.sxxs.cn"
-    assert domain.status == 'active'
+    assert domain.status == "active"
     assert domain.verify_token is None
 
     again = await tenant_domains.ensure_tenant_subdomain(db_session, demo_tenant)
@@ -170,8 +168,8 @@ async def test_subdomain_comes_from_base_domain_and_is_active(
 async def test_amap_proxy_resolves_tenant_from_host(db_session, demo_tenant):
     await _bind(db_session, demo_tenant, "shop.example.com")
 
-    bound = cast(Any, _HostRequest('shop.example.com:8000'))
-    unknown = cast(Any, _HostRequest('nowhere.example.com'))
+    bound = cast(Any, _HostRequest("shop.example.com:8000"))
+    unknown = cast(Any, _HostRequest("nowhere.example.com"))
 
     assert await _tenant_id_for_host(db_session, bound) == demo_tenant.id
     assert await _tenant_id_for_host(db_session, unknown) == 1  # DEMO_TENANT_ID 兜底
