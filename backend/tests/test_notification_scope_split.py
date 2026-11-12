@@ -65,7 +65,6 @@ async def test_variable_catalog_carries_chinese_annotations(client, platform_tok
     rows = response.json()["data"]
     assert [row["name"] for row in rows] == [
         "tenant_name",
-        "tenant_short_name",
         "tenant_domain",
         "buyer_name",
         "order_no",
@@ -75,7 +74,10 @@ async def test_variable_catalog_carries_chinese_annotations(client, platform_tok
     ]
     for row in rows:
         assert row["label"] and row["description"] and row["example"], row["name"]
-    assert "站点全称" in rows[0]["label"]
+    assert "站点名称" in rows[0]["label"]
+    assert "short_name" not in [row["name"] for row in rows], (
+        "简称没有独立数据源，和 tenant_name 同值，已删除"
+    )
 
 
 async def test_tenant_side_sees_both_audiences(client, admin_token, platform_token):

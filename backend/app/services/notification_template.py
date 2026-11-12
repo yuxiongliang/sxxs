@@ -26,7 +26,6 @@ VARIABLE_PATTERN = re.compile(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}")
 # 只允许这些变量：白名单能防住「模板里塞表达式」这类注入
 ALLOWED_VARIABLES = {
     "tenant_name",
-    "tenant_short_name",
     "tenant_domain",
     "buyer_name",
     "order_no",
@@ -39,14 +38,9 @@ ALLOWED_VARIABLES = {
 # 直接渲染成「可用变量」说明，漏登记等于运营看不到新变量。
 VARIABLE_CATALOG: dict[str, dict[str, str]] = {
     "tenant_name": {
-        "label": "站点全称",
-        "description": "租户站点的完整名称：取租户的显示名，没设时用租户名。",
+        "label": "站点名称",
+        "description": "租户站点的名称：取租户的显示名（控制台「品牌 → 全站名称」），没设时用租户名。",
         "example": "示例二手市场",
-    },
-    "tenant_short_name": {
-        "label": "站点简称",
-        "description": "站点短名，短信和标题有字数限制时用它。",
-        "example": "示例市场",
     },
     "tenant_domain": {
         "label": "站点域名",
@@ -114,7 +108,6 @@ def variable_catalog() -> list[dict[str, str]]:
     """可用变量清单（平台端据此渲染中文注解）。顺序即展示顺序。"""
     order = (
         "tenant_name",
-        "tenant_short_name",
         "tenant_domain",
         "buyer_name",
         "order_no",

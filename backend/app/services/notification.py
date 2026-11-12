@@ -98,7 +98,6 @@ async def send_notification(
         tenant_name = (tenant.display_name or tenant.name) if tenant else ""
         context = {
             "tenant_name": tenant_name,
-            "tenant_short_name": tenant_name,
             "tenant_domain": await _primary_domain(db, tenant_id),
             "buyer_name": payload.audience or "",
             "order_no": "",
