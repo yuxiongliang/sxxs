@@ -18,9 +18,7 @@ from app.services import tenant_domains
 from app.services.setting import DEFAULT_SETTINGS
 
 
-async def create_tenant_cli(
-    name: str, slug: str, email: str, nickname: str, password: str
-) -> None:
+async def create_tenant_cli(name: str, slug: str, email: str, nickname: str, password: str) -> None:
     async with AsyncSessionLocal() as db:
         tenant = (await db.scalars(select(Tenant).where(Tenant.slug == slug))).first()
         if tenant is None:
@@ -106,9 +104,7 @@ def main() -> None:
     parser.add_argument("--nickname", default="租户管理员")
     parser.add_argument("--password", required=True)
     args = parser.parse_args()
-    asyncio.run(
-        create_tenant_cli(args.name, args.slug, args.email, args.nickname, args.password)
-    )
+    asyncio.run(create_tenant_cli(args.name, args.slug, args.email, args.nickname, args.password))
 
 
 if __name__ == "__main__":

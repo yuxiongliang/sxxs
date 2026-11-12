@@ -88,7 +88,9 @@ async def test_unused_plan_can_be_deleted(client, platform_token):
         f"/api/v1/platform/plans/{plan_id}", headers=bearer(platform_token)
     )
     assert removed.status_code == 200, removed.text
-    listed = (await client.get("/api/v1/platform/plans", headers=bearer(platform_token))).json()["data"]
+    listed = (await client.get("/api/v1/platform/plans", headers=bearer(platform_token))).json()[
+        "data"
+    ]
     assert all(plan["id"] != plan_id for plan in listed)
 
 

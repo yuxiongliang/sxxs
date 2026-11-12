@@ -18,7 +18,7 @@ from app.models.tenant import Tenant
 from app.seed_auth import DEMO_TENANT_SLUG
 from app.services import billing as billing_service
 
-BUYOUT_CODE = 'buyout'
+BUYOUT_CODE = "buyout"
 
 # 历史套餐：不再售卖，但必须保留这些行 —— 历史订阅/账单引用它们，
 # 且 free 仍是「欠费降级」的落点、pro 仍是 demo 租户所在套餐。
@@ -91,7 +91,7 @@ SEED_PLANS = [
 
 async def seed_billing_data(db: AsyncSession) -> None:
     for item in SEED_PLANS:
-        existing = (await db.scalars(select(Plan).where(Plan.code == item['code']))).first()
+        existing = (await db.scalars(select(Plan).where(Plan.code == item["code"]))).first()
         if existing is None:
             db.add(Plan(status="active", **item))
         else:
@@ -109,25 +109,21 @@ async def seed_billing_data(db: AsyncSession) -> None:
     # 历史套餐：缺了就补建（否则 demo 的 pro / 降级用的 free 会查不到），
     # 并统一标记为 archived —— 不再对外售卖，但行必须留着
     for item in ARCHIVED_PLANS:
-        legacy = (
-            await db.scalars(select(Plan).where(Plan.code == item["code"]))
-        ).first()
+        legacy = (await db.scalars(select(Plan).where(Plan.code == item["code"]))).first()
         if legacy is None:
             db.add(Plan(status="archived", **item))
         else:
             legacy.status = "archived"
     await db.flush()
 
-    tenant = (
-        await db.scalars(select(Tenant).where(Tenant.slug == DEMO_TENANT_SLUG))
-    ).first()
+    tenant = (await db.scalars(select(Tenant).where(Tenant.slug == DEMO_TENANT_SLUG))).first()
     if tenant is None:
         await db.commit()
         return
 
     subscription = await billing_service.get_subscription(db, tenant.id)
     if subscription is None:
-        pro = (await db.scalars(select(Plan).where(Plan.code == 'pro'))).first()
+        pro = (await db.scalars(select(Plan).where(Plan.code == "pro"))).first()
         await billing_service.start_subscription(
             db, tenant.id, pro.id if pro else None, trial=False, commit=False
         )

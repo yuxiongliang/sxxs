@@ -62,9 +62,7 @@ async def monthly_report(db: AsyncSession, month: str | None = None) -> dict:
     subscriptions = {
         row.tenant_id: row for row in (await db.scalars(select(TenantSubscription))).all()
     }
-    plan_periods = {
-        row.id: row.period for row in (await db.scalars(select(Plan))).all()
-    }
+    plan_periods = {row.id: row.period for row in (await db.scalars(select(Plan))).all()}
 
     rows = []
     total_commission = 0

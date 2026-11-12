@@ -118,9 +118,7 @@ async def delete_plan(
     if plan is None:
         raise HTTPException(status_code=404, detail="套餐不存在")
     in_use = (
-        await db.scalars(
-            select(TenantSubscription.id).where(TenantSubscription.plan_id == plan_id)
-        )
+        await db.scalars(select(TenantSubscription.id).where(TenantSubscription.plan_id == plan_id))
     ).first()
     if in_use is not None:
         raise HTTPException(
