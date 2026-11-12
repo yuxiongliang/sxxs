@@ -29,6 +29,7 @@ import type {
   OrderRecord,
   SellerOrderRecord,
 } from '@/services/commerce/types';
+import { labelOf, ORDER_STATUS } from '@/utils/labels';
 import SettingPage from '../../system/components/SettingPage';
 
 const statusColor = (status: string) =>
@@ -116,7 +117,9 @@ const OrderManagementPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       width: 160,
-      render: (value: string) => <Tag color={statusColor(value)}>{value}</Tag>,
+      render: (value: string) => (
+        <Tag color={statusColor(value)}>{labelOf(ORDER_STATUS, value)}</Tag>
+      ),
     },
     {
       title: '操作',
@@ -174,7 +177,9 @@ const OrderManagementPage: React.FC = () => {
     {
       title: '状态',
       dataIndex: 'status',
-      render: (value: string) => <Tag color={statusColor(value)}>{value}</Tag>,
+      render: (value: string) => (
+        <Tag color={statusColor(value)}>{labelOf(ORDER_STATUS, value)}</Tag>
+      ),
     },
     {
       title: '操作',

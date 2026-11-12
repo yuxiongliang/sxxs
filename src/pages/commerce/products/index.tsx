@@ -25,6 +25,7 @@ import {
   updateAdminProduct,
 } from '@/services/commerce/api';
 import type { ProductRecord } from '@/services/commerce/types';
+import { labelOf, PRODUCT_STATUS } from '@/utils/labels';
 import SettingPage from '../../system/components/SettingPage';
 
 const statusColor = (status: string) =>
@@ -81,7 +82,9 @@ const ProductManagementPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       width: 140,
-      render: (value: string) => <Tag color={statusColor(value)}>{value}</Tag>,
+      render: (value: string) => (
+        <Tag color={statusColor(value)}>{labelOf(PRODUCT_STATUS, value)}</Tag>
+      ),
     },
     {
       title: '操作',

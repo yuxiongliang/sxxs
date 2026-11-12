@@ -1,10 +1,11 @@
-import { ShopOutlined, ReloadOutlined } from '@ant-design/icons';
+import { ReloadOutlined, ShopOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { App, Button, Card, Popconfirm, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import React from 'react';
 import { listAdminSellers, reviewSeller } from '@/services/commerce/api';
 import type { SellerRecord } from '@/services/commerce/types';
+import { KYC_STATUS, labelOf, SELLER_STATUS } from '@/utils/labels';
 import SettingPage from '../../system/components/SettingPage';
 
 const statusColor = (status: string) =>
@@ -33,13 +34,17 @@ const SellerManagementPage: React.FC = () => {
       title: 'KYC',
       dataIndex: 'kyc_status',
       render: (value: string) => (
-        <Tag color={value === 'approved' ? 'success' : 'gold'}>{value}</Tag>
+        <Tag color={value === 'approved' ? 'success' : 'gold'}>
+          {labelOf(KYC_STATUS, value)}
+        </Tag>
       ),
     },
     {
       title: '状态',
       dataIndex: 'status',
-      render: (value: string) => <Tag color={statusColor(value)}>{value}</Tag>,
+      render: (value: string) => (
+        <Tag color={statusColor(value)}>{labelOf(SELLER_STATUS, value)}</Tag>
+      ),
     },
     {
       title: '操作',

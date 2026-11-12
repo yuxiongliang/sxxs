@@ -48,6 +48,7 @@ import type {
   SellerRecord,
   SettlementBatchRecord,
 } from '@/services/commerce/types';
+import { ACTIVITY_STATUS, labelOf, PAYOUT_STATUS } from '@/utils/labels';
 import SettingPage from '../../system/components/SettingPage';
 
 interface SellerFinance extends SellerRecord {
@@ -216,7 +217,9 @@ const FinancePage: React.FC = () => {
       dataIndex: 'status',
       width: 100,
       render: (value: string) => (
-        <Tag color={value === 'active' ? 'success' : 'default'}>{value}</Tag>
+        <Tag color={value === 'active' ? 'success' : 'default'}>
+          {labelOf(ACTIVITY_STATUS, value)}
+        </Tag>
       ),
     },
     {
@@ -266,7 +269,9 @@ const FinancePage: React.FC = () => {
       dataIndex: 'status',
       width: 100,
       render: (value: string) => (
-        <Tag color={value === 'active' ? 'success' : 'default'}>{value}</Tag>
+        <Tag color={value === 'active' ? 'success' : 'default'}>
+          {labelOf(ACTIVITY_STATUS, value)}
+        </Tag>
       ),
     },
     {
@@ -304,7 +309,9 @@ const FinancePage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       width: 110,
-      render: (value: string) => <Tag color={payoutColor(value)}>{value}</Tag>,
+      render: (value: string) => (
+        <Tag color={payoutColor(value)}>{labelOf(PAYOUT_STATUS, value)}</Tag>
+      ),
     },
     {
       title: '驳回原因',

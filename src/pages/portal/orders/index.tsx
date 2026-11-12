@@ -8,6 +8,7 @@ import {
   mockPayPortalOrder,
 } from '@/services/commerce/api';
 import type { PortalOrder } from '@/services/commerce/types';
+import { labelOf, ORDER_STATUS } from '@/utils/labels';
 import PortalShell from '../components/PortalShell';
 
 const yuan = (cents: number) => `¥${(cents / 100).toFixed(2)}`;
@@ -44,7 +45,9 @@ export default function PortalOrdersPage() {
       dataIndex: 'status',
       width: 120,
       render: (value: string) => (
-        <Tag color={STATUS_COLOR[value] ?? 'default'}>{value}</Tag>
+        <Tag color={STATUS_COLOR[value] ?? 'default'}>
+          {labelOf(ORDER_STATUS, value)}
+        </Tag>
       ),
     },
     {
