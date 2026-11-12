@@ -47,15 +47,11 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_service_categories_code"), "service_categories", ["code"], unique=True
-    )
+    op.create_index(op.f("ix_service_categories_code"), "service_categories", ["code"], unique=True)
     op.create_index(op.f("ix_service_categories_status"), "service_categories", ["status"])
 
     op.add_column("tenants", sa.Column("service_category_id", sa.Integer(), nullable=True))
-    op.create_index(
-        op.f("ix_tenants_service_category_id"), "tenants", ["service_category_id"]
-    )
+    op.create_index(op.f("ix_tenants_service_category_id"), "tenants", ["service_category_id"])
     op.create_foreign_key(
         "fk_tenants_service_category",
         "tenants",

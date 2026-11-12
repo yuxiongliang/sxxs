@@ -38,6 +38,21 @@ async def _other_token(client) -> str:
     return response.json()["data"]["access_token"]
 
 
+async def _subscribe_monthly(client, platform_token, tenant_id: int) -> None:
+    """把租户切到一个按月套餐上 —— 新租户默认是终身买断，不按周期续费。"""
+    plans = (
+        await client.get(
+            "/api/v1/platform/plans?include_archived=true", headers=bearer(platform_token)
+        )
+    ).json()["data"]
+    monthly = next(plan for plan in plans if plan["code"] == "pro")
+    response = await client.post(
+        f"/api/v1/platform/tenants/{tenant_id}/subscription",
+        headers=bearer(platform_token),
+        json={"plan_id": monthly["id"]},
+    )
+    assert response.status_code == 200, response.text
+
 # --------------------------------------------------------------------------- #
 # Plans
 # --------------------------------------------------------------------------- #
@@ -46,8 +61,22 @@ async def _other_token(client) -> str:
 async def test_seeded_plan_catalogue(client, admin_token, platform_token):
     response = await client.get("/api/v1/platform/plans", headers=bearer(platform_token))
     assert response.status_code == 200, response.text
-    codes = {plan["code"] for plan in response.json()["data"]}
-    assert {"free", "pro", "enterprise"} <= codes
+    plans = response.json()["data"]
+    codes = {plan["code"] for plan in plans}
+    # 平台只卖一个买断套餐：全功能 / 9999 元 / 终身 / 不抽佣
+    assert codes == {"buyout"}
+    buyout = plans[0]
+    assert buyout["period"] == "lifetime"
+    assert buyout["price_cents"] == 999900
+    assert buyout["trial_days"] == 0
+    assert buyout["quotas"] == {"products": None, "members": None}
+
+    # 历史套餐下架但保留行（历史订阅/账单还引用它们）
+    archived = await client.get(
+        "/api/v1/platform/plans?include_archived=true", headers=bearer(platform_token)
+    )
+    archived_codes = {plan["code"] for plan in archived.json()["data"]}
+    assert {"free", "pro", "enterprise"} <= archived_codes
 
 
 async def test_create_plan_and_reject_duplicate_code(client, admin_token, platform_token):
@@ -114,7 +143,7 @@ async def test_demo_tenant_is_on_the_pro_plan(client, admin_token, platform_toke
     assert report["quotas"]["products"] == 5000
 
 
-async def test_new_tenant_starts_a_trial_of_the_default_plan(client, admin_token, platform_token):
+async def test_new_tenant_gets_the_buyout_plan_without_trial(client, admin_token, platform_token):
     created = await _create_other_tenant(client, platform_token)
     token = await _other_token(client)
 
@@ -123,15 +152,16 @@ async def test_new_tenant_starts_a_trial_of_the_default_plan(client, admin_token
             f"/api/v1/platform/tenants/{created['id']}/usage", headers=bearer(platform_token)
         )
     ).json()["data"]
-    assert report["plan"]["code"] == "free"
-    assert report["subscription"]["status"] == "trialing"
-    assert report["subscription"]["trial_end"] is not None
-    assert report["days_left"] is not None
+    # 买断口径：没有试用、状态直接 active、周期是终身
+    assert report["plan"]["code"] == "buyout"
+    assert report["plan"]["period"] == "lifetime"
+    assert report["subscription"]["status"] == "active"
+    assert report["subscription"]["trial_end"] is None
 
     # The tenant can read its own subscription through the member-facing route.
     own = await client.get("/api/v1/tenant/subscription", headers=bearer(token))
     assert own.status_code == 200
-    assert own.json()["data"]["plan"]["code"] == "free"
+    assert own.json()["data"]["plan"]["code"] == "buyout"
 
 
 async def test_usage_counts_reflect_business_data(client, admin_token, platform_token):
@@ -145,13 +175,12 @@ async def test_usage_counts_reflect_business_data(client, admin_token, platform_
 
 async def test_change_plan(client, admin_token, platform_token):
     created = await _create_other_tenant(client, platform_token)
-    enterprise = next(
-        plan
-        for plan in (
-            await client.get("/api/v1/platform/plans", headers=bearer(platform_token))
-        ).json()["data"]
-        if plan["code"] == "enterprise"
-    )
+    archived_plans = (
+        await client.get(
+            "/api/v1/platform/plans?include_archived=true", headers=bearer(platform_token)
+        )
+    ).json()["data"]
+    enterprise = next(plan for plan in archived_plans if plan["code"] == "enterprise")
 
     response = await client.post(
         f"/api/v1/platform/tenants/{created['id']}/subscription",
@@ -296,6 +325,7 @@ async def test_renew_creates_a_pending_invoice_and_extends_the_period(
     client, admin_token, db_session
 , platform_token):
     created = await _create_other_tenant(client, platform_token)
+    await _subscribe_monthly(client, platform_token, created["id"])
     before = (
         await client.get(
             f"/api/v1/platform/tenants/{created['id']}/usage", headers=bearer(platform_token)
@@ -322,6 +352,7 @@ async def test_renew_creates_a_pending_invoice_and_extends_the_period(
 
 async def test_pay_invoice_and_reject_double_payment(client, admin_token, platform_token):
     created = await _create_other_tenant(client, platform_token)
+    await _subscribe_monthly(client, platform_token, created["id"])
     invoice = (
         await client.post(
             f"/api/v1/platform/tenants/{created['id']}/renew",
@@ -345,6 +376,7 @@ async def test_pay_invoice_and_reject_double_payment(client, admin_token, platfo
 
 async def test_invoices_are_filterable_by_tenant(client, admin_token, platform_token):
     created = await _create_other_tenant(client, platform_token)
+    await _subscribe_monthly(client, platform_token, created["id"])
     await client.post(
         f"/api/v1/platform/tenants/{created['id']}/renew",
         headers=bearer(platform_token),

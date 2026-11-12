@@ -70,6 +70,8 @@ async def create_plan(
         description=payload.description,
         price_cents=payload.price_cents,
         period=payload.period,
+        starts_at=payload.starts_at,
+        ends_at=payload.ends_at,
         trial_days=payload.trial_days,
         quotas=payload.quotas,
         features=payload.features or [],
@@ -298,9 +300,7 @@ async def list_tenants_with_plan(
     """Tenant list enriched with plan / subscription / usage for the console."""
     tenants = await platform_service.list_tenants(db)
     # 业务类目一次查完，避免逐租户查库
-    categories = {
-        row.id: row for row in (await db.scalars(select(ServiceCategory))).all()
-    }
+    categories = {row.id: row for row in (await db.scalars(select(ServiceCategory))).all()}
     result = []
     for tenant in tenants:
         report = await billing_service.usage_report(db, tenant.id)

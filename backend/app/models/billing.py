@@ -11,6 +11,8 @@ SUBSCRIPTION_STATUSES = ("trialing", "active", "past_due", "cancelled")
 INVOICE_STATUSES = ("pending", "paid", "void")
 # Billing periods and how many days each adds to a term.
 PERIOD_DAYS = {"monthly": 30, "yearly": 365}
+# 非周期套餐：lifetime=永久买断，custom=管理员填的固定档期（起止日期）
+NON_RECURRING_PERIODS = frozenset({"lifetime", "custom"})
 
 
 class Plan(Base, TimestampMixin):
@@ -28,6 +30,10 @@ class Plan(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(String(255), default="")
     price_cents: Mapped[int] = mapped_column(Integer, default=0)
     period: Mapped[str] = mapped_column(String(16), default="monthly")
+    # 仅 period=custom 时有值：套餐的固定档期（管理员在平台端填）
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # 买断/档期套餐不允许试用（trial_days 必须为 0），由 schema 校验
     trial_days: Mapped[int] = mapped_column(Integer, default=14)
     quotas: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     features: Mapped[list | None] = mapped_column(JSON, nullable=True)

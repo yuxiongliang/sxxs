@@ -106,9 +106,7 @@ async def update_category(
     return category
 
 
-async def assign_tenant(
-    db: AsyncSession, tenant: Tenant, category_id: int | None
-) -> Tenant:
+async def assign_tenant(db: AsyncSession, tenant: Tenant, category_id: int | None) -> Tenant:
     """给租户归类；category_id=None 表示取消归类。"""
     if category_id is not None:
         category = await get_or_404(db, category_id)

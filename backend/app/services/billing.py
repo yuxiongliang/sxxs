@@ -22,14 +22,23 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.billing import PERIOD_DAYS, Invoice, Plan, TenantSubscription
+from app.models.billing import (
+    NON_RECURRING_PERIODS,
+    PERIOD_DAYS,
+    Invoice,
+    Plan,
+    TenantSubscription,
+)
 from app.models.catalog import Product
 from app.models.order import Order
 from app.models.tenant import TenantMember
 from app.services import audit as audit_service
 from app.services.auth import AuthContext
 
-DEFAULT_PLAN_CODE = "free"
+# 新开通租户默认用买断套餐（平台只卖这一个）；
+# 欠费降级的落点仍是 free（下架但保留行），两者不能混用同一个常量。
+DEFAULT_PLAN_CODE = "buyout"
+DOWNGRADE_PLAN_CODE = "free"
 # Days a tenant keeps full service after an invoice falls due before downgrading.
 DEFAULT_GRACE_DAYS = 7
 # Quota keys understood by ``check_quota``.
@@ -80,6 +89,27 @@ async def _default_plan(db: AsyncSession) -> Plan | None:
     return plans[0] if plans else None
 
 
+# 永久套餐用一个极远的到期时间表示，避免 current_period_end 变成可空到处判空
+LIFETIME_END = datetime(9999, 12, 31, tzinfo=UTC)
+
+
+def _term_window(plan: Plan, now: datetime, trial_days: int) -> tuple[datetime, datetime]:
+    """算出这次订阅的起止时间。
+
+    * lifetime —— 永久：起点 now，终点 LIFETIME_END；
+    * custom   —— 用管理员在套餐上填的档期，缺任一端直接报错，不猜；
+    * 其它     —— 试用天数优先，否则一个计费周期。
+    """
+    if plan.period == "lifetime":
+        return now, LIFETIME_END
+    if plan.period == "custom":
+        if plan.starts_at is None or plan.ends_at is None:
+            raise HTTPException(status_code=400, detail="自定义档期套餐缺少开始或到期时间")
+        return plan.starts_at, plan.ends_at
+    days = trial_days or PERIOD_DAYS.get(plan.period, 30)
+    return now, now + timedelta(days=days)
+
+
 async def start_subscription(
     db: AsyncSession,
     tenant_id: int,
@@ -94,24 +124,25 @@ async def start_subscription(
         return None
 
     now = datetime.now(UTC)
-    trial_days = plan.trial_days if trial else 0
-    period_days = PERIOD_DAYS.get(plan.period, 30)
+    # 永久买断 / 自定义档期套餐不允许试用：试用只对周期套餐有意义
+    trial_days = plan.trial_days if trial and plan.period not in NON_RECURRING_PERIODS else 0
+    period_start, period_end = _term_window(plan, now, trial_days)
     subscription = await get_subscription(db, tenant_id)
     if subscription is None:
         subscription = TenantSubscription(
             tenant_id=tenant_id,
             plan_id=plan.id,
             status="trialing" if trial_days else "active",
-            current_period_start=now,
-            current_period_end=now + timedelta(days=trial_days or period_days),
+            current_period_start=period_start,
+            current_period_end=period_end,
             trial_end=now + timedelta(days=trial_days) if trial_days else None,
         )
         db.add(subscription)
     else:
         subscription.plan_id = plan.id
         subscription.status = "trialing" if trial_days else "active"
-        subscription.current_period_start = now
-        subscription.current_period_end = now + timedelta(days=trial_days or period_days)
+        subscription.current_period_start = period_start
+        subscription.current_period_end = period_end
         subscription.trial_end = now + timedelta(days=trial_days) if trial_days else None
         subscription.cancel_at_period_end = False
 
@@ -153,6 +184,12 @@ async def renew_subscription(
     plan = await db.get(Plan, subscription.plan_id)
     if plan is None:
         raise HTTPException(status_code=404, detail="套餐不存在")
+
+    if plan.period in NON_RECURRING_PERIODS:
+        # 买断/档期套餐没有「下一个账期」，续费会凭空造一笔不该收的账单
+        raise HTTPException(
+            status_code=400, detail="该套餐是永久买断或自定义档期，不按周期续费"
+        )
 
     now = datetime.now(UTC)
     period_days = days or PERIOD_DAYS.get(plan.period, 30)
@@ -311,12 +348,15 @@ async def run_billing_cycle(
     }
 
     subscriptions = list((await db.scalars(select(TenantSubscription))).all())
-    free_plan = await get_plan_by_code(db, DEFAULT_PLAN_CODE)
+    free_plan = await get_plan_by_code(db, DOWNGRADE_PLAN_CODE)
 
     for subscription in subscriptions:
         summary["scanned"] += 1
         plan = await db.get(Plan, subscription.plan_id)
         if plan is None:
+            continue
+        # 永久买断 / 自定义档期不参与周期计费：不开发票、不判欠费、不降级
+        if plan.period in NON_RECURRING_PERIODS:
             continue
 
         if subscription.status == "past_due":

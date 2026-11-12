@@ -1,6 +1,10 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+# 非周期套餐：永久买断 / 管理员自定义档期；这两类一律不许试用
+NON_RECURRING_PERIODS = frozenset({'lifetime', 'custom'})
+PERIOD_PATTERN = '^(monthly|yearly|lifetime|custom)$'
 
 
 class PlanCreate(BaseModel):
@@ -8,19 +12,34 @@ class PlanCreate(BaseModel):
     name: str = Field(min_length=1, max_length=64)
     description: str = Field(default="", max_length=255)
     price_cents: int = Field(default=0, ge=0)
-    period: str = Field(default="monthly", pattern="^(monthly|yearly)$")
+    period: str = Field(default="monthly", pattern=PERIOD_PATTERN)
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
     trial_days: int = Field(default=14, ge=0, le=365)
     quotas: dict[str, int | None] | None = None
     features: list[str] | None = None
     sort: int = Field(default=0, ge=0)
     status: str = Field(default="active", pattern="^(active|archived)$")
 
+    @model_validator(mode="after")
+    def _check_term(self):
+        if self.period in NON_RECURRING_PERIODS and self.trial_days:
+            raise ValueError("永久买断/自定义档期套餐不能设置试用天数")
+        if self.period == "custom":
+            if self.starts_at is None or self.ends_at is None:
+                raise ValueError("自定义档期必须同时给开始时间和到期时间")
+            if self.ends_at <= self.starts_at:
+                raise ValueError("到期时间必须晚于开始时间")
+        return self
+
 
 class PlanUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=64)
     description: str | None = Field(default=None, max_length=255)
     price_cents: int | None = Field(default=None, ge=0)
-    period: str | None = Field(default=None, pattern="^(monthly|yearly)$")
+    period: str | None = Field(default=None, pattern=PERIOD_PATTERN)
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
     trial_days: int | None = Field(default=None, ge=0, le=365)
     quotas: dict[str, int | None] | None = None
     features: list[str] | None = None
@@ -37,6 +56,8 @@ class PlanOut(BaseModel):
     description: str
     price_cents: int
     period: str
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
     trial_days: int
     quotas: dict[str, int | None] | None = None
     features: list[str] | None = None
