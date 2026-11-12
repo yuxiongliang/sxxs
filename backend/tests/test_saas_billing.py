@@ -53,6 +53,7 @@ async def _subscribe_monthly(client, platform_token, tenant_id: int) -> None:
     )
     assert response.status_code == 200, response.text
 
+
 # --------------------------------------------------------------------------- #
 # Plans
 # --------------------------------------------------------------------------- #
@@ -236,7 +237,9 @@ async def test_member_quota_is_enforced(client, admin_token, db_session, platfor
     assert "配额" in blocked.json()["message"]
 
 
-async def test_product_quota_is_enforced(client, admin_token, operator_token, db_session, platform_token):
+async def test_product_quota_is_enforced(
+    client, admin_token, operator_token, db_session, platform_token
+):
     """Switch the demo tenant to a products=0 plan and seller listing must fail."""
     zero = (
         await client.post(
@@ -280,15 +283,13 @@ async def test_rename_tenant(client, admin_token, platform_token):
 
 
 async def test_suspend_blocks_the_tenant_and_resume_restores_it(
-    client, admin_token, db_session
-, platform_token):
+    client, admin_token, db_session, platform_token
+):
     created = await _create_other_tenant(client, platform_token)
     token = await _other_token(client)
 
     # Before suspension the owner can use the API.
-    assert (
-        await client.get("/api/v1/auth/me", headers=bearer(token))
-    ).status_code == 200
+    assert (await client.get("/api/v1/auth/me", headers=bearer(token))).status_code == 200
 
     suspended = await client.post(
         f"/api/v1/platform/tenants/{created['id']}/suspend",
@@ -322,8 +323,8 @@ async def test_demo_tenant_cannot_be_suspended(client, admin_token, platform_tok
 
 
 async def test_renew_creates_a_pending_invoice_and_extends_the_period(
-    client, admin_token, db_session
-, platform_token):
+    client, admin_token, db_session, platform_token
+):
     created = await _create_other_tenant(client, platform_token)
     await _subscribe_monthly(client, platform_token, created["id"])
     before = (
@@ -428,7 +429,9 @@ async def test_tenant_owner_cannot_suspend_itself(client, admin_token, platform_
     assert response.status_code == 401
 
 
-async def test_suspended_tenant_rows_remain_queryable_by_platform(client, admin_token, db_session, platform_token):
+async def test_suspended_tenant_rows_remain_queryable_by_platform(
+    client, admin_token, db_session, platform_token
+):
     created = await _create_other_tenant(client, platform_token)
     await client.post(
         f"/api/v1/platform/tenants/{created['id']}/suspend",
