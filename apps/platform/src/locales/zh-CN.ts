@@ -1,12 +1,14 @@
 export default {
   // Umi 的 layout 插件用路由 name 本身作为消息 id（不是 menu.<name>），
   // 所以裸 key 和 menu.* 两种都提供，换任何一版插件都能显示中文。
+  audit: '平台审计',
   notifications: '通知中心',
   tenants: '租户与计费',
   moderation: '内容审核',
   services: '服务配置',
   settings: '平台配置',
   login: '登录',
+  'menu.audit': '平台审计',
   'menu.notifications': '通知中心',
   'menu.tenants': '租户与计费',
   'menu.moderation': '内容审核',

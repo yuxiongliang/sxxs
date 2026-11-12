@@ -340,3 +340,31 @@ export const saveNotificationTemplate = (
     `/platform/notification-templates/${scope}/${code}`,
     payload,
   );
+
+// ---------------------------------------------------------------------------
+// 平台审计（只含 tenant_id 为空的平台行）
+// ---------------------------------------------------------------------------
+
+export interface PlatformAuditRecord {
+  id: number;
+  actor_id: number | null;
+  action: string;
+  target_type: string;
+  target_id: string;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export const listPlatformAudit = (params: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  const parts: string[] = [];
+  if (params.current !== undefined) parts.push('current=' + params.current);
+  if (params.pageSize !== undefined) parts.push('pageSize=' + params.pageSize);
+  const q = parts.join('&');
+  return apiGet<{ list: PlatformAuditRecord[]; total: number }>(
+    q ? '/platform/audit?' + q : '/platform/audit',
+  );
+};

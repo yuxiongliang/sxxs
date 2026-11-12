@@ -1,10 +1,12 @@
 export default {
+  audit: 'Platform Audit',
   notifications: 'Notifications',
   tenants: 'Tenants & Billing',
   moderation: 'Content Review',
   services: 'Service Config',
   settings: 'Platform Settings',
   login: 'Sign in',
+  'menu.audit': 'Platform Audit',
   'menu.notifications': 'Notifications',
   'menu.tenants': 'Tenants & Billing',
   'menu.moderation': 'Content Review',

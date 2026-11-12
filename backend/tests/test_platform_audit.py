@@ -21,16 +21,13 @@ async def test_platform_setting_change_is_audited(client, platform_token):
     )
     assert saved.status_code == 200, saved.text
 
-    response = await client.get(
-        "/api/v1/platform/audit", headers=bearer(platform_token)
-    )
+    response = await client.get("/api/v1/platform/audit", headers=bearer(platform_token))
     assert response.status_code == 200, response.text
     items = response.json()["data"]["list"]
     matched = [
         item
         for item in items
-        if item["action"] == "platform.setting.update"
-        and item["target_id"] == "amap"
+        if item["action"] == "platform.setting.update" and item["target_id"] == "amap"
     ]
     assert matched, f"未找到平台审计记录，实际：{[i['action'] for i in items][:5]}"
     assert matched[0]["after"]["enabled"] is True
