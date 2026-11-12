@@ -368,3 +368,20 @@ export const listPlatformAudit = (params: {
     q ? '/platform/audit?' + q : '/platform/audit',
   );
 };
+
+// ---------------------------------------------------------------------------
+// 租户概览（品牌 / 支付 / 域名状态）
+// ---------------------------------------------------------------------------
+
+export interface TenantOverviewRecord {
+  tenant_id: number;
+  name: string;
+  slug: string;
+  status: string;
+  brand: { display_name: string; customized: boolean; has_logo: boolean };
+  payment: { source: string; configured: boolean };
+  domain: { supported: boolean; note: string };
+}
+
+export const listTenantOverview = () =>
+  apiGet<TenantOverviewRecord[]>('/platform/overview/tenants');

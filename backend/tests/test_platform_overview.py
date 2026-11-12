@@ -19,9 +19,7 @@ def test_placeholder_app_id_is_not_configured():
     assert _payment_configured({"wechat": {"appId": "wx-real"}}) is True
 
 
-async def test_overview_reports_brand_and_payment_state(
-    client, admin_token, platform_token
-):
+async def test_overview_reports_brand_and_payment_state(client, admin_token, platform_token):
     await client.put(
         "/api/v1/tenant/brand",
         headers=bearer(admin_token),
@@ -37,9 +35,7 @@ async def test_overview_reports_brand_and_payment_state(
         },
     )
 
-    response = await client.get(
-        "/api/v1/platform/overview/tenants", headers=bearer(platform_token)
-    )
+    response = await client.get("/api/v1/platform/overview/tenants", headers=bearer(platform_token))
     assert response.status_code == 200, response.text
     rows = response.json()["data"]
     demo = next(item for item in rows if item["slug"] == "demo")
@@ -51,7 +47,5 @@ async def test_overview_reports_brand_and_payment_state(
 
 
 async def test_overview_requires_platform_token(client, admin_token):
-    response = await client.get(
-        "/api/v1/platform/overview/tenants", headers=bearer(admin_token)
-    )
+    response = await client.get("/api/v1/platform/overview/tenants", headers=bearer(admin_token))
     assert response.status_code == 401, response.text

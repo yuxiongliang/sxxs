@@ -12,6 +12,12 @@ export default [
     component: './tenants',
   },
   {
+    path: '/overview',
+    name: 'overview',
+    icon: 'DashboardOutlined',
+    component: './overview',
+  },
+  {
     path: '/audit',
     name: 'audit',
     icon: 'SafetyCertificateOutlined',

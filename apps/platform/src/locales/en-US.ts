@@ -1,4 +1,5 @@
 export default {
+  overview: 'Tenants Overview',
   audit: 'Platform Audit',
   notifications: 'Notifications',
   tenants: 'Tenants & Billing',
@@ -6,6 +7,7 @@ export default {
   services: 'Service Config',
   settings: 'Platform Settings',
   login: 'Sign in',
+  'menu.overview': 'Tenants Overview',
   'menu.audit': 'Platform Audit',
   'menu.notifications': 'Notifications',
   'menu.tenants': 'Tenants & Billing',
