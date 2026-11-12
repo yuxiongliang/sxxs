@@ -1,4 +1,3 @@
-import { DashboardOutlined, GlobalOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -16,14 +15,11 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useState } from 'react';
-import PageShell from '@/components/PageShell';
-import type { TenantDomainRecord, TenantOverviewRecord } from '@/services/api';
+import type { TenantDomainRecord } from '@/services/api';
 import {
   createTenantDomain,
   deleteTenantDomain,
   listTenantDomains,
-  listTenantOverview,
   verifyTenantDomain,
 } from '@/services/api';
 
@@ -42,128 +38,37 @@ const DOMAIN_KIND: Record<TenantDomainRecord['kind'], string> = {
   custom: '客户域名',
 };
 
-function DomainCell({ record }: { record: TenantOverviewRecord }) {
-  const { primary_host: primaryHost, active, pending, total } = record.domain;
-  return (
-    <Space orientation="vertical" size={0}>
-      {primaryHost ? (
-        <Typography.Text>{primaryHost}</Typography.Text>
-      ) : (
-        <Typography.Text type="secondary">未绑定域名</Typography.Text>
-      )}
-      <Space size={4}>
-        {active > 0 ? <Tag color="green">生效 {active}</Tag> : null}
-        {pending > 0 ? <Tag color="orange">待验证 {pending}</Tag> : null}
-        {total === 0 ? <Tag>无</Tag> : null}
-      </Space>
-    </Space>
-  );
-}
-
-function buildColumns(
-  onManageDomains: (record: TenantOverviewRecord) => void,
-): ColumnsType<TenantOverviewRecord> {
-  return [
-    {
-      title: '租户',
-      width: 240,
-      render: (_, record) => (
-        <Space orientation="vertical" size={0}>
-          <Typography.Text strong>{record.name}</Typography.Text>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {record.slug} · #{record.tenant_id}
-          </Typography.Text>
-        </Space>
-      ),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
-      render: (value: string) => (
-        <Tag color={value === 'active' ? 'green' : 'default'}>{value}</Tag>
-      ),
-    },
-    {
-      title: '品牌',
-      width: 200,
-      render: (_, record) => (
-        <Space orientation="vertical" size={0}>
-          <Typography.Text>{record.brand.display_name}</Typography.Text>
-          <Space size={4}>
-            {record.brand.customized ? (
-              <Tag color="blue">已自定义</Tag>
-            ) : (
-              <Tag>默认</Tag>
-            )}
-            {record.brand.has_logo ? <Tag color="purple">有 logo</Tag> : null}
-          </Space>
-        </Space>
-      ),
-    },
-    {
-      title: '支付',
-      width: 160,
-      render: (_, record) => (
-        <Space orientation="vertical" size={0}>
-          {record.payment.configured ? (
-            <Tag color="green">已配置</Tag>
-          ) : (
-            <Tag color="red">未配置</Tag>
-          )}
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            source: {record.payment.source}
-          </Typography.Text>
-        </Space>
-      ),
-    },
-    {
-      title: '自定义域名',
-      width: 220,
-      render: (_, record) => <DomainCell record={record} />,
-    },
-    {
-      title: '操作',
-      width: 120,
-      render: (_, record) => (
-        <Button
-          type="link"
-          icon={<GlobalOutlined />}
-          onClick={() => onManageDomains(record)}
-        >
-          域名
-        </Button>
-      ),
-    },
-  ];
-}
-
 interface TenantDomainDrawerProps {
-  tenant: TenantOverviewRecord | null;
+  tenantId: number | null;
+  tenantName?: string;
   onClose: () => void;
 }
 
-function TenantDomainDrawer({ tenant, onClose }: TenantDomainDrawerProps) {
+export default function TenantDomainDrawer({
+  tenantId,
+  tenantName,
+  onClose,
+}: TenantDomainDrawerProps) {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [form] = Form.useForm<{ host: string; kind: 'custom' | 'subdomain' }>();
-  const tenantId = tenant?.tenant_id ?? 0;
+  const open = tenantId !== null;
 
   const domains = useQuery({
     queryKey: ['tenant-domains', tenantId],
-    queryFn: () => listTenantDomains(tenantId),
-    enabled: Boolean(tenant),
+    queryFn: () => listTenantDomains(tenantId as number),
+    enabled: open,
   });
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['tenant-domains', tenantId] });
-    // 概览页的域名计数也要跟着变，否则关掉抽屉还显示旧状态
+    // 租户表上的域名列也要跟着变，否则关掉抽屉还显示旧状态
     queryClient.invalidateQueries({ queryKey: ['tenant-overview'] });
   };
 
   const create = useMutation({
     mutationFn: (values: { host: string; kind: 'custom' | 'subdomain' }) =>
-      createTenantDomain(tenantId, values),
+      createTenantDomain(tenantId as number, values),
     onSuccess: (record) => {
       message.success(
         record.status === 'active'
@@ -177,7 +82,8 @@ function TenantDomainDrawer({ tenant, onClose }: TenantDomainDrawerProps) {
   });
 
   const verify = useMutation({
-    mutationFn: (domainId: number) => verifyTenantDomain(tenantId, domainId),
+    mutationFn: (domainId: number) =>
+      verifyTenantDomain(tenantId as number, domainId),
     onSuccess: (record) => {
       if (record.status === 'active') {
         message.success('验证通过，域名已生效');
@@ -190,7 +96,8 @@ function TenantDomainDrawer({ tenant, onClose }: TenantDomainDrawerProps) {
   });
 
   const remove = useMutation({
-    mutationFn: (domainId: number) => deleteTenantDomain(tenantId, domainId),
+    mutationFn: (domainId: number) =>
+      deleteTenantDomain(tenantId as number, domainId),
     onSuccess: () => {
       message.success('域名已解绑');
       refresh();
@@ -254,9 +161,9 @@ function TenantDomainDrawer({ tenant, onClose }: TenantDomainDrawerProps) {
 
   return (
     <Drawer
-      title={tenant ? `${tenant.name} · 域名` : '域名'}
+      title={tenantName ? `${tenantName} · 域名` : '域名'}
       size={720}
-      open={Boolean(tenant)}
+      open={open}
       onClose={() => {
         form.resetFields();
         onClose();
@@ -326,40 +233,5 @@ function TenantDomainDrawer({ tenant, onClose }: TenantDomainDrawerProps) {
         pagination={false}
       />
     </Drawer>
-  );
-}
-
-export default function TenantOverviewPage() {
-  const [managed, setManaged] = useState<TenantOverviewRecord | null>(null);
-  const overview = useQuery({
-    queryKey: ['tenant-overview'],
-    queryFn: listTenantOverview,
-  });
-
-  return (
-    <PageShell
-      title="租户概览"
-      subTitle="排障入口：每个租户的品牌、支付与域名状态"
-      icon={<DashboardOutlined />}
-    >
-      <Alert
-        type="info"
-        showIcon
-        style={{ marginBottom: 16 }}
-        title="「未配置」是按占位值判定的"
-        description="租户照抄默认 alipay / wechat appId 时会被判为未配置——这类租户实际收不了款，需要催办。"
-      />
-      <Card>
-        <Table<TenantOverviewRecord>
-          rowKey="tenant_id"
-          size="small"
-          loading={overview.isLoading}
-          columns={buildColumns(setManaged)}
-          dataSource={overview.data ?? []}
-          pagination={false}
-        />
-      </Card>
-      <TenantDomainDrawer tenant={managed} onClose={() => setManaged(null)} />
-    </PageShell>
   );
 }

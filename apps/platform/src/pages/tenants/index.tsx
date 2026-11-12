@@ -2,7 +2,6 @@ import {
   ClusterOutlined,
   PlusOutlined,
   ReloadOutlined,
-  WalletOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -11,38 +10,31 @@ import {
   Card,
   Form,
   Input,
-  InputNumber,
   Modal,
   Popconfirm,
   Progress,
   Select,
   Space,
   Table,
-  Tabs,
   Tag,
+  Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
-import React, { useState } from 'react';
-import type {
-  InvoiceRecord,
-  PlanRecord,
-  TenantWithPlan,
-} from '@/services/api';
+import { useMemo, useState } from 'react';
+import PageShell from '@/components/PageShell';
+import type { TenantOverviewRecord, TenantWithPlan } from '@/services/api';
 import {
-  createPlan,
   createTenant,
-  listInvoices,
   listPlans,
+  listTenantOverview,
   listTenantsWithPlan,
-  payInvoice,
   renewTenant,
   resumeTenant,
   subscribeTenant,
   suspendTenant,
   updateTenant,
 } from '@/services/api';
-import SettingPage from '@/components/PageShell';
+import TenantDomainDrawer from './DomainDrawer';
 
 const yuan = (cents: number) => `¥${(cents / 100).toFixed(2)}`;
 
@@ -55,13 +47,64 @@ const statusColor = (status?: string) =>
         ? 'red'
         : 'default';
 
+function BrandCell({ overview }: { overview?: TenantOverviewRecord }) {
+  if (!overview) return <Typography.Text type="secondary">—</Typography.Text>;
+  return (
+    <Space orientation="vertical" size={0}>
+      <Typography.Text>{overview.brand.display_name}</Typography.Text>
+      <Space size={4}>
+        {overview.brand.customized ? (
+          <Tag color="blue">已自定义</Tag>
+        ) : (
+          <Tag>默认</Tag>
+        )}
+        {overview.brand.has_logo ? <Tag color="purple">有 logo</Tag> : null}
+      </Space>
+    </Space>
+  );
+}
+
+function PaymentCell({ overview }: { overview?: TenantOverviewRecord }) {
+  if (!overview) return <Typography.Text type="secondary">—</Typography.Text>;
+  return (
+    <Space orientation="vertical" size={0}>
+      {overview.payment.configured ? (
+        <Tag color="green">已配置</Tag>
+      ) : (
+        <Tag color="red">未配置</Tag>
+      )}
+      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        source: {overview.payment.source}
+      </Typography.Text>
+    </Space>
+  );
+}
+
+function DomainCell({ overview }: { overview?: TenantOverviewRecord }) {
+  if (!overview) return <Typography.Text type="secondary">—</Typography.Text>;
+  const { primary_host: primaryHost, active, pending, total } = overview.domain;
+  return (
+    <Space orientation="vertical" size={0}>
+      {primaryHost ? (
+        <Typography.Text>{primaryHost}</Typography.Text>
+      ) : (
+        <Typography.Text type="secondary">未绑定域名</Typography.Text>
+      )}
+      <Space size={4}>
+        {active > 0 ? <Tag color="green">生效 {active}</Tag> : null}
+        {pending > 0 ? <Tag color="orange">待验证 {pending}</Tag> : null}
+        {total === 0 ? <Tag>无</Tag> : null}
+      </Space>
+    </Space>
+  );
+}
+
 const PlatformTenantsPage: React.FC = () => {
   const { message } = App.useApp();
   const [createOpen, setCreateOpen] = useState(false);
-  const [planOpen, setPlanOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<TenantWithPlan>();
+  const [domainTarget, setDomainTarget] = useState<TenantWithPlan | null>(null);
   const [createForm] = Form.useForm();
-  const [planForm] = Form.useForm();
   const [renameForm] = Form.useForm();
 
   const tenants = useQuery({
@@ -69,13 +112,20 @@ const PlatformTenantsPage: React.FC = () => {
     queryFn: listTenantsWithPlan,
   });
   const plans = useQuery({ queryKey: ['platform-plans'], queryFn: listPlans });
-  const invoices = useQuery({
-    queryKey: ['platform-invoices'],
-    queryFn: () => listInvoices(),
+  // 概览数据（品牌 / 支付 / 域名）不单独开页面，直接并进这张表
+  const overview = useQuery({
+    queryKey: ['tenant-overview'],
+    queryFn: listTenantOverview,
   });
 
+  const overviewByTenant = useMemo(() => {
+    const map = new Map<number, TenantOverviewRecord>();
+    for (const row of overview.data ?? []) map.set(row.tenant_id, row);
+    return map;
+  }, [overview.data]);
+
   const refreshAll = async () => {
-    await Promise.all([tenants.refetch(), plans.refetch(), invoices.refetch()]);
+    await Promise.all([tenants.refetch(), plans.refetch(), overview.refetch()]);
   };
 
   const handleCreate = async () => {
@@ -87,57 +137,36 @@ const PlatformTenantsPage: React.FC = () => {
     await refreshAll();
   };
 
-  const handleCreatePlan = async () => {
-    const values = await planForm.validateFields();
-    try {
-      await createPlan({
-        code: values.code,
-        name: values.name,
-        price_cents: Math.round((values.price_yuan ?? 0) * 100),
-        period: values.period,
-        trial_days: values.trial_days ?? 14,
-        quotas: {
-          products: values.products === undefined ? null : values.products,
-          members: values.members === undefined ? null : values.members,
-        },
-        features: values.features ?? [],
-      });
-      message.success('套餐已创建');
-      setPlanOpen(false);
-      planForm.resetFields();
-      await plans.refetch();
-    } catch (error: any) {
-      message.error(error?.message || '创建套餐失败');
-    }
-  };
-
   const handleRename = async () => {
     if (!renameTarget) return;
     const values = await renameForm.validateFields();
     await updateTenant(renameTarget.id, { name: values.name });
     message.success('租户已更新');
     setRenameTarget(undefined);
-    await tenants.refetch();
+    await refreshAll();
   };
 
   const tenantColumns: ColumnsType<TenantWithPlan> = [
     {
       title: '租户',
       dataIndex: 'name',
+      width: 200,
       render: (value: string, record) => (
         <Space orientation="vertical" size={0}>
           <Space>
             <ClusterOutlined style={{ color: '#1677ff' }} />
             <strong>{value}</strong>
           </Space>
-          <span style={{ color: '#8c8c8c', fontSize: 12 }}>{record.slug}</span>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {record.slug} · #{record.id}
+          </Typography.Text>
         </Space>
       ),
     },
     {
       title: '状态',
       dataIndex: 'status',
-      width: 110,
+      width: 100,
       render: (value: string) => <Tag color={statusColor(value)}>{value}</Tag>,
     },
     {
@@ -161,18 +190,18 @@ const PlatformTenantsPage: React.FC = () => {
               await refreshAll();
             }}
           />
-          <span style={{ color: '#8c8c8c', fontSize: 12 }}>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {record.subscription
               ? `${record.subscription.status} · 剩 ${record.days_left ?? 0} 天`
               : '无订阅记录'}
-          </span>
+          </Typography.Text>
         </Space>
       ),
     },
     {
       title: '用量 / 配额',
       key: 'usage',
-      width: 190,
+      width: 170,
       render: (_, record) => {
         const used = record.used?.products ?? 0;
         const limit = record.quotas?.products;
@@ -194,8 +223,32 @@ const PlatformTenantsPage: React.FC = () => {
       },
     },
     {
+      title: '品牌',
+      key: 'brand',
+      width: 150,
+      render: (_, record) => (
+        <BrandCell overview={overviewByTenant.get(record.id)} />
+      ),
+    },
+    {
+      title: '支付',
+      key: 'payment',
+      width: 130,
+      render: (_, record) => (
+        <PaymentCell overview={overviewByTenant.get(record.id)} />
+      ),
+    },
+    {
+      title: '域名',
+      key: 'domain',
+      width: 190,
+      render: (_, record) => (
+        <DomainCell overview={overviewByTenant.get(record.id)} />
+      ),
+    },
+    {
       title: '操作',
-      width: 290,
+      width: 250,
       render: (_, record) => (
         <Space size={2} wrap>
           <Button
@@ -222,6 +275,13 @@ const PlatformTenantsPage: React.FC = () => {
             }}
           >
             续费
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => setDomainTarget(record)}
+          >
+            域名
           </Button>
           {record.status === 'active' ? (
             <Popconfirm
@@ -263,101 +323,10 @@ const PlatformTenantsPage: React.FC = () => {
     },
   ];
 
-  const planColumns: ColumnsType<PlanRecord> = [
-    { title: '编码', dataIndex: 'code', width: 130 },
-    { title: '名称', dataIndex: 'name' },
-    {
-      title: '价格',
-      dataIndex: 'price_cents',
-      width: 150,
-      render: (value: number, record) => `${yuan(value)} / ${record.period}`,
-    },
-    {
-      title: '商品配额',
-      key: 'products',
-      width: 120,
-      render: (_, record) => record.quotas?.products ?? '不限',
-    },
-    {
-      title: '成员配额',
-      key: 'members',
-      width: 120,
-      render: (_, record) => record.quotas?.members ?? '不限',
-    },
-    {
-      title: '功能',
-      key: 'features',
-      render: (_, record) => (
-        <Space size={4} wrap>
-          {(record.features ?? []).map((feature) => (
-            <Tag key={feature}>{feature}</Tag>
-          ))}
-        </Space>
-      ),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
-      render: (value: string) => (
-        <Tag color={value === 'active' ? 'success' : 'default'}>{value}</Tag>
-      ),
-    },
-  ];
-
-  const invoiceColumns: ColumnsType<InvoiceRecord> = [
-    { title: '账单号', dataIndex: 'invoice_no' },
-    { title: '租户 ID', dataIndex: 'tenant_id', width: 100 },
-    {
-      title: '金额',
-      dataIndex: 'amount_cents',
-      width: 120,
-      render: (value: number) => yuan(value),
-    },
-    {
-      title: '账期',
-      key: 'period',
-      render: (_, record) =>
-        `${dayjs(record.period_start).format('YYYY-MM-DD')} ~ ${dayjs(record.period_end).format('YYYY-MM-DD')}`,
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
-      render: (value: string) => (
-        <Tag
-          color={
-            value === 'paid' ? 'success' : value === 'void' ? 'default' : 'gold'
-          }
-        >
-          {value}
-        </Tag>
-      ),
-    },
-    {
-      title: '操作',
-      width: 120,
-      render: (_, record) => (
-        <Button
-          type="link"
-          size="small"
-          disabled={record.status !== 'pending'}
-          onClick={async () => {
-            await payInvoice(record.id);
-            message.success('账单已支付');
-            await refreshAll();
-          }}
-        >
-          标记已付
-        </Button>
-      ),
-    },
-  ];
-
   return (
-    <SettingPage
-      title="租户管理"
-      subTitle="SaaS 租户开通、套餐订阅、用量配额与账单"
+    <PageShell
+      title="租户"
+      subTitle="租户概况一屏看完：套餐、用量、品牌、支付与域名"
       icon={<ClusterOutlined />}
       extra={
         <Space>
@@ -374,64 +343,16 @@ const PlatformTenantsPage: React.FC = () => {
         </Space>
       }
     >
-      <Tabs
-        items={[
-          {
-            key: 'tenants',
-            label: '租户',
-            children: (
-              <Card>
-                <Table
-                  rowKey="id"
-                  loading={tenants.isLoading}
-                  columns={tenantColumns}
-                  dataSource={tenants.data ?? []}
-                  pagination={false}
-                />
-              </Card>
-            ),
-          },
-          {
-            key: 'plans',
-            label: '套餐',
-            children: (
-              <Card
-                extra={
-                  <Button
-                    icon={<PlusOutlined />}
-                    onClick={() => setPlanOpen(true)}
-                  >
-                    新建套餐
-                  </Button>
-                }
-              >
-                <Table
-                  rowKey="id"
-                  loading={plans.isLoading}
-                  columns={planColumns}
-                  dataSource={plans.data ?? []}
-                  pagination={false}
-                />
-              </Card>
-            ),
-          },
-          {
-            key: 'invoices',
-            label: '账单',
-            children: (
-              <Card>
-                <Table
-                  rowKey="id"
-                  loading={invoices.isLoading}
-                  columns={invoiceColumns}
-                  dataSource={invoices.data ?? []}
-                  pagination={false}
-                />
-              </Card>
-            ),
-          },
-        ]}
-      />
+      <Card>
+        <Table
+          rowKey="id"
+          loading={tenants.isLoading || overview.isLoading}
+          columns={tenantColumns}
+          dataSource={tenants.data ?? []}
+          scroll={{ x: 1580 }}
+          pagination={false}
+        />
+      </Card>
 
       <Modal
         title="开通租户"
@@ -458,115 +379,49 @@ const PlatformTenantsPage: React.FC = () => {
             <Input placeholder="acme" />
           </Form.Item>
           <Form.Item
-            label="所有者邮箱"
+            label="管理员邮箱"
             name="email"
             rules={[{ required: true }]}
           >
-            <Input placeholder="owner@acme.com" />
+            <Input placeholder="owner@example.com" />
           </Form.Item>
           <Form.Item
-            label="所有者昵称"
+            label="管理员昵称"
             name="nickname"
             rules={[{ required: true }]}
           >
-            <Input placeholder="Acme Owner" />
+            <Input placeholder="站长" />
           </Form.Item>
           <Form.Item
             label="初始密码"
             name="password"
             rules={[{ required: true, min: 6 }]}
           >
-            <Input.Password placeholder="至少 6 位" />
+            <Input.Password />
           </Form.Item>
         </Form>
-        <span style={{ color: '#8c8c8c' }}>
-          新租户会自动订阅免费版并进入试用期。
-        </span>
       </Modal>
 
       <Modal
-        title="重命名租户"
-        open={!!renameTarget}
+        title="租户改名"
+        open={Boolean(renameTarget)}
         onCancel={() => setRenameTarget(undefined)}
         onOk={handleRename}
         okText="保存"
       >
         <Form form={renameForm} layout="vertical">
-          <Form.Item label="租户名称" name="name" rules={[{ required: true }]}>
+          <Form.Item label="名称" name="name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
         </Form>
       </Modal>
 
-      <Modal
-        title="新建套餐"
-        open={planOpen}
-        onCancel={() => setPlanOpen(false)}
-        onOk={handleCreatePlan}
-        okText="创建"
-      >
-        <Form
-          form={planForm}
-          layout="vertical"
-          initialValues={{ period: 'monthly', trial_days: 14 }}
-        >
-          <Form.Item
-            label="套餐编码"
-            name="code"
-            rules={[
-              {
-                required: true,
-                pattern: /^[a-z0-9-]+$/,
-                message: '仅小写字母/数字/中划线',
-              },
-            ]}
-          >
-            <Input placeholder="starter" />
-          </Form.Item>
-          <Form.Item label="套餐名称" name="name" rules={[{ required: true }]}>
-            <Input placeholder="入门版" />
-          </Form.Item>
-          <Form.Item label="价格（元）" name="price_yuan">
-            <InputNumber min={0} step={10} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="计费周期" name="period">
-            <Select
-              options={[
-                { value: 'monthly', label: '按月' },
-                { value: 'yearly', label: '按年' },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item label="试用天数" name="trial_days">
-            <InputNumber min={0} max={365} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="商品配额（留空为不限）" name="products">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="成员配额（留空为不限）" name="members">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="功能开关" name="features">
-            <Select
-              mode="tags"
-              placeholder="portal / im / finance / commission"
-              options={['portal', 'im', 'finance', 'commission'].map(
-                (value) => ({
-                  value,
-                  label: value,
-                }),
-              )}
-            />
-          </Form.Item>
-        </Form>
-        <Space size={6}>
-          <WalletOutlined />
-          <span style={{ color: '#8c8c8c' }}>
-            配额留空表示不限；功能开关用于前端按套餐隐藏模块。
-          </span>
-        </Space>
-      </Modal>
-    </SettingPage>
+      <TenantDomainDrawer
+        tenantId={domainTarget ? domainTarget.id : null}
+        tenantName={domainTarget?.name}
+        onClose={() => setDomainTarget(null)}
+      />
+    </PageShell>
   );
 };
 
