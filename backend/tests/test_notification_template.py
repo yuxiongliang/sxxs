@@ -151,9 +151,7 @@ async def test_notification_prefs_mandatory_inbox_cannot_be_disabled(client, adm
     )
     assert saved.status_code == 200, saved.text
     again = await client.get("/api/v1/notifications/prefs", headers=bearer(admin_token))
-    sms = next(
-        item for item in again.json()["data"]["channels"] if item["channel"] == "sms"
-    )
+    sms = next(item for item in again.json()["data"]["channels"] if item["channel"] == "sms")
     assert sms["enabled"] is False
 
     blocked = await client.put(

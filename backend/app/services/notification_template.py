@@ -150,11 +150,7 @@ def render(text: str, context: dict[str, str]) -> str:
     """渲染并校验。缺失变量直接报错，不做静默替换。"""
     if not text:
         return ""
-    missing = [
-        name
-        for name in extract_variables(text)
-        if not str(context.get(name) or "").strip()
-    ]
+    missing = [name for name in extract_variables(text) if not str(context.get(name) or "").strip()]
     if missing:
         raise HTTPException(
             status_code=400,

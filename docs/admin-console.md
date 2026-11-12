@@ -46,10 +46,17 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 9000
 
 ```bash
 cd ant-design-pro
-npm start
-# http://localhost:8000
+npm start          # 租户控制台 http://localhost:8010
+cd apps/platform && npm start   # 平台端控制台 http://localhost:8001
 # dev proxy: /api/v1 -> http://127.0.0.1:9000
 ```
+
+**端口为什么是 8010 而不是 8000**：租户端用 utoopack 开发服务器，它会额外占用
+`PORT + 1` 的 `127.0.0.1` 端口（8000 → 8001）作为内部助手端口。8001 是平台端的
+正式端口，被这个助手占住后 `http://127.0.0.1:8001` 会落到租户端的 404 上。
+所以租户端固定 8010（助手落在 8011），把 8001 完整留给平台端。
+同一个 `localhost` 的另一个坑：平台端只监听 IPv6 通配地址，`localhost` 走 `::1`
+能通；加了转发/助手抢走 IPv4 时就会出现「同一个端口两个应用」。改端口后两端不再重叠。
 
 For a production build against a real API:
 

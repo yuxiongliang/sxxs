@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     rate_limit_auth_window_seconds: int = 60
     cors_origins: list[str] = Field(
         default_factory=lambda: [
+            # 租户控制台 dev 端口（8001 留给平台端，见 package.json 的 PORT=8010）
+            "http://localhost:8010",
+            "http://127.0.0.1:8010",
+            # 平台端控制台
+            "http://localhost:8001",
+            "http://127.0.0.1:8001",
+            # 历史端口，保留以免旧环境打不开
             "http://localhost:8000",
             "http://127.0.0.1:8000",
             "http://localhost:8002",
