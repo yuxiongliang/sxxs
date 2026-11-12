@@ -4,17 +4,18 @@
 安全密钥由本服务注入，永远不进入前端代码。
 
 限制：只允许 GET，且只转发到白名单里的两个上游；前缀 _AMapService 由高德 SDK 固定，
-不能改名。因为 JS API 请求不带租户身份，这里固定使用 DEMO_TENANT_ID 的配置 ——
-多租户场景若要各自使用自己的 key，需要按域名/子域映射租户后再取配置。
+不能改名。JS API 请求本身不带租户身份，所以按请求 Host 解析租户（B6）；
+Host 解析不出来时（本地开发 / 未绑定域名的租户）回落到 DEMO_TENANT_ID。
 """
 
 from __future__ import annotations
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import AsyncSessionLocal
-from app.services import setting_resolver
+from app.services import setting_resolver, tenant_domains
 
 router = APIRouter(tags=["高德代理"])
 
@@ -23,16 +24,18 @@ UPSTREAM_REST = "https://restapi.amap.com"
 UPSTREAM_STYLES = "https://webapi.amap.com"
 
 
-async def _security_code() -> str:
-    """代理用的 securityCode。
+async def _tenant_id_for_host(session: AsyncSession, request: Request) -> int:
+    """按 Host 找租户；找不到才回落 demo —— 共用 key 只是兜底，不是常态。"""
+    host = tenant_domains.normalize_request_host(request.headers.get("host"))
+    tenant = await tenant_domains.tenant_by_host(session, host)
+    return tenant.id if tenant is not None else DEMO_TENANT_ID
 
-    注意：这里仍是 DEMO_TENANT_ID。等到自定义域名（Host 解析）上线后，
-    应改为按请求 Host 解析租户，否则多租户共用代理会拿错 key。
-    """
+
+async def _security_code(request: Request) -> str:
+    """代理用的 securityCode：取当前 Host 对应租户的高德配置。"""
     async with AsyncSessionLocal() as session:
-        config = await setting_resolver.resolve_for_runtime(
-            session, DEMO_TENANT_ID, "amap"
-        )
+        tenant_id = await _tenant_id_for_host(session, request)
+        config = await setting_resolver.resolve_for_runtime(session, tenant_id, "amap")
     return str(config.get("securityCode") or "")
 
 
@@ -53,11 +56,11 @@ async def _forward(url: str, params: dict[str, str], jscode: str) -> Response:
 
 @router.get("/_AMapService/v4/map/styles")
 async def proxy_map_styles(request: Request):
-    jscode = await _security_code()
+    jscode = await _security_code(request)
     return await _forward(UPSTREAM_STYLES + "/v4/map/styles", dict(request.query_params), jscode)
 
 
 @router.get("/_AMapService/{path:path}")
 async def proxy_rest(request: Request, path: str):
-    jscode = await _security_code()
+    jscode = await _security_code(request)
     return await _forward(f"{UPSTREAM_REST}/{path.lstrip('/')}", dict(request.query_params), jscode)

@@ -17,7 +17,7 @@ from app.models.platform_setting import PlatformSetting
 from app.models.role import Role
 from app.models.seller import Seller, SellerMember, Shop
 from app.models.setting import SystemSetting
-from app.models.tenant import Tenant, TenantMember
+from app.models.tenant import Tenant, TenantDomain, TenantMember
 from app.models.user import User
 
 __all__ = [
@@ -41,7 +41,6 @@ __all__ = [
     "ModerationLog",
     "Notification",
     "NotificationTemplate",
-    "TenantNotificationPref",
     "Order",
     "OrderItem",
     "Payment",
@@ -62,7 +61,9 @@ __all__ = [
     "Shop",
     "SystemSetting",
     "Tenant",
+    "TenantDomain",
     "TenantMember",
+    "TenantNotificationPref",
     "TenantSubscription",
     "User",
 ]

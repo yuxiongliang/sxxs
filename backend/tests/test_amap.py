@@ -262,12 +262,13 @@ async def test_amap_error_maps_to_http_429_when_quota_exhausted(client, admin_to
 async def test_security_proxy_injects_jscode(client, admin_token, monkeypatch):
     """/_AMapService 代理必须把安全密钥注入 jscode，且不需要登录态。
 
-    代理是给浏览器 JS SDK 调用的无鉴权端点，它用独立连接读配置（不能依赖请求上下文）；
-    测试里直接桩住 _security_code，锁定「拿到密钥后必须注入 jscode」这个契约。
+    代理是给浏览器 JS SDK 调用的无鉴权端点，它用独立连接读配置（不能依赖请求上下文），
+    只从 Host 头判断是哪个租户的密钥；测试里直接桩住 _security_code，锁定「拿到密钥后
+    必须注入 jscode」这个契约。
     """
     _patch_http(monkeypatch, _FakeResponse({"status": "1", "info": "OK"}))
 
-    async def _fake_code() -> str:
+    async def _fake_code(_request) -> str:
         return "secret-demo"
 
     monkeypatch.setattr(proxy_amap, "_security_code", _fake_code)

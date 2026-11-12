@@ -39,6 +39,17 @@ class Settings(BaseSettings):
     # 经营看板按业务时区切分自然日。用 UTC 切日会让每天有 8 小时的「今天」算错。
     business_timezone: str = "Asia/Shanghai"
 
+    # ---- B6 自定义域名（Host → 租户）----
+    # 租户子域后缀：\{slug\}.{tenant_base_domain}。留空表示不自动建子域。
+    tenant_base_domain: str = ""
+    # 平台控制台自己的域名：命中它时不做租户解析（平台端没有租户概念）。
+    platform_host: str = ""
+    # 域名所有权校验的 TXT 解析提供者：none（不校验，停在 pending）/ dns / static（测试）。
+    domain_verify_provider: str = "none"
+    # Host 解析不出来时是否回落到 ?tenant= 或默认租户。
+    # 线上必须关闭：把「不认识的域名」静默当成 demo 站，会让租户误以为域名已生效。
+    tenant_host_fallback: bool = True
+
     # Rate limiting (Redis fixed window). Auth endpoints get a tighter budget.
     rate_limit_enabled: bool = True
     rate_limit_requests: int = 600
