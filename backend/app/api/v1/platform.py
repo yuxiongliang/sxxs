@@ -36,7 +36,13 @@ async def create_tenant(
     db: AsyncSession = Depends(get_db),
 ):
     tenant = await platform_service.create_tenant(
-        db, payload.name, payload.slug, payload.email, payload.nickname, payload.password
+        db,
+        payload.name,
+        payload.slug,
+        payload.email,
+        payload.nickname,
+        payload.password,
+        service_category_id=payload.service_category_id,
     )
     return ok(
         {"id": tenant.id, "name": tenant.name, "slug": tenant.slug, "status": tenant.status},

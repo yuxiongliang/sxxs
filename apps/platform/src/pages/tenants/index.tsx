@@ -24,8 +24,10 @@ import { useMemo, useState } from 'react';
 import PageShell from '@/components/PageShell';
 import type { TenantOverviewRecord, TenantWithPlan } from '@/services/api';
 import {
+  assignTenantCategory,
   createTenant,
   listPlans,
+  listServiceCategories,
   listTenantOverview,
   listTenantsWithPlan,
   renewTenant,
@@ -37,6 +39,10 @@ import {
 import TenantDomainDrawer from './DomainDrawer';
 
 const yuan = (cents: number) => `¥${(cents / 100).toFixed(2)}`;
+
+/** bps → 百分比：500 → 5% */
+const bpsToPercent = (bps: number) =>
+  `${(bps / 100).toFixed(bps % 100 === 0 ? 0 : 2)}%`;
 
 const statusColor = (status?: string) =>
   status === 'active'
@@ -104,14 +110,23 @@ const PlatformTenantsPage: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<TenantWithPlan>();
   const [domainTarget, setDomainTarget] = useState<TenantWithPlan | null>(null);
+  const [categoryTarget, setCategoryTarget] = useState<TenantWithPlan | null>(
+    null,
+  );
   const [createForm] = Form.useForm();
   const [renameForm] = Form.useForm();
+  const [categoryForm] = Form.useForm();
 
   const tenants = useQuery({
     queryKey: ['platform-tenants-plan'],
     queryFn: listTenantsWithPlan,
   });
   const plans = useQuery({ queryKey: ['platform-plans'], queryFn: listPlans });
+  // 业务类目：决定抽佣比例，开通租户与「归类」都要用
+  const categories = useQuery({
+    queryKey: ['service-categories'],
+    queryFn: () => listServiceCategories(),
+  });
   // 概览数据（品牌 / 支付 / 域名）不单独开页面，直接并进这张表
   const overview = useQuery({
     queryKey: ['tenant-overview'],
@@ -125,7 +140,12 @@ const PlatformTenantsPage: React.FC = () => {
   }, [overview.data]);
 
   const refreshAll = async () => {
-    await Promise.all([tenants.refetch(), plans.refetch(), overview.refetch()]);
+    await Promise.all([
+      tenants.refetch(),
+      plans.refetch(),
+      overview.refetch(),
+      categories.refetch(),
+    ]);
   };
 
   const handleCreate = async () => {
@@ -223,6 +243,26 @@ const PlatformTenantsPage: React.FC = () => {
       },
     },
     {
+      title: '类目 / 抽佣',
+      key: 'service_category',
+      width: 170,
+      render: (_, record) =>
+        record.service_category ? (
+          <Space orientation="vertical" size={0}>
+            <Typography.Text>{record.service_category.name}</Typography.Text>
+            {record.service_category.commission_bps > 0 ? (
+              <Tag color="gold">
+                抽佣 {bpsToPercent(record.service_category.commission_bps)}
+              </Tag>
+            ) : (
+              <Tag>不抽佣</Tag>
+            )}
+          </Space>
+        ) : (
+          <Tag color="red">未分类</Tag>
+        ),
+    },
+    {
       title: '品牌',
       key: 'brand',
       width: 150,
@@ -251,6 +291,18 @@ const PlatformTenantsPage: React.FC = () => {
       width: 250,
       render: (_, record) => (
         <Space size={2} wrap>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => {
+              setCategoryTarget(record);
+              categoryForm.setFieldsValue({
+                service_category_id: record.service_category?.id ?? undefined,
+              });
+            }}
+          >
+            归类
+          </Button>
           <Button
             type="link"
             size="small"
@@ -393,6 +445,23 @@ const PlatformTenantsPage: React.FC = () => {
             <Input placeholder="站长" />
           </Form.Item>
           <Form.Item
+            label="服务类目"
+            name="service_category_id"
+            extra="决定抽佣比例；留空表示暂未分类（不抽佣），之后可以在列表里补。"
+          >
+            <Select
+              allowClear
+              placeholder="未分类"
+              options={(categories.data ?? []).map((item) => ({
+                value: item.id,
+                label:
+                  item.commission_bps > 0
+                    ? `${item.name}（抽佣 ${bpsToPercent(item.commission_bps)}）`
+                    : `${item.name}（不抽佣）`,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item
             label="初始密码"
             name="password"
             rules={[{ required: true, min: 6 }]}
@@ -412,6 +481,43 @@ const PlatformTenantsPage: React.FC = () => {
         <Form form={renameForm} layout="vertical">
           <Form.Item label="名称" name="name" rules={[{ required: true }]}>
             <Input />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="归类到服务类目"
+        open={Boolean(categoryTarget)}
+        onCancel={() => setCategoryTarget(null)}
+        onOk={async () => {
+          if (!categoryTarget) return;
+          try {
+            const value = categoryForm.getFieldValue('service_category_id') as
+              | number
+              | undefined;
+            await assignTenantCategory(categoryTarget.id, value ?? null);
+            message.success('归类已更新');
+            setCategoryTarget(null);
+            await refreshAll();
+          } catch (error: any) {
+            message.error(error?.message || '归类失败');
+          }
+        }}
+        okText="保存"
+      >
+        <Form form={categoryForm} layout="vertical">
+          <Form.Item name="service_category_id" label="服务类目">
+            <Select
+              allowClear
+              placeholder="未分类（不抽佣）"
+              options={(categories.data ?? []).map((item) => ({
+                value: item.id,
+                label:
+                  item.commission_bps > 0
+                    ? `${item.name}（抽佣 ${bpsToPercent(item.commission_bps)}）`
+                    : `${item.name}（不抽佣）`,
+              }))}
+            />
           </Form.Item>
         </Form>
       </Modal>

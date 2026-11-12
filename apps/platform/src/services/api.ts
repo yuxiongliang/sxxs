@@ -77,6 +77,13 @@ export interface TenantWithPlan extends TenantRecord {
   quotas: Record<string, number | null>;
   exceeded: string[];
   days_left?: number | null;
+  /** 平台级业务类目（决定抽佣比例）；null = 未分类 = 不抽佣 */
+  service_category: {
+    id: number;
+    code: string;
+    name: string;
+    commission_bps: number;
+  } | null;
 }
 
 export interface InvoiceRecord {
@@ -100,6 +107,7 @@ export const createTenant = (data: {
   email: string;
   nickname: string;
   password: string;
+  service_category_id?: number | null;
 }) => apiPost<TenantRecord>('/platform/tenants', data);
 
 export const listTenantsWithPlan = () =>
@@ -409,37 +417,52 @@ export const listTenantOverview = () =>
   apiGet<TenantOverviewRecord[]>('/platform/overview/tenants');
 
 // ---------------------------------------------------------------------------
-// 服务类目（只读总览：平台侧跨租户查看各租户的经营类目）
+// 服务类目（平台级业务类目：决定租户归属与抽佣比例，不是商品类目）
 // ---------------------------------------------------------------------------
 
-export interface PlatformCategoryRecord {
+export interface ServiceCategoryRecord {
   id: number;
-  tenant_id: number;
-  tenant_name: string;
-  tenant_slug: string;
+  code: string;
   name: string;
-  slug: string;
-  parent_id: number | null;
+  description: string;
+  /** 抽佣比例，万分比：500 = 5% */
+  commission_bps: number;
+  status: 'active' | 'archived';
   sort: number;
-  status: string;
-  product_count: number;
+  tenant_count?: number;
 }
 
-export const listPlatformCategories = (params?: {
-  tenantId?: number;
-  q?: string;
-}) => {
-  const query = new URLSearchParams();
-  if (params?.tenantId !== undefined) query.set('tenant_id', String(params.tenantId));
-  if (params?.q) query.set('q', params.q);
-  const suffix = query.toString();
-  return apiGet<PlatformCategoryRecord[]>(
-    `/platform/categories${suffix ? `?${suffix}` : ''}`,
+export const listServiceCategories = (includeArchived = false) =>
+  apiGet<ServiceCategoryRecord[]>(
+    `/platform/service-categories${includeArchived ? '?include_archived=true' : ''}`,
   );
-};
 
-// ---------------------------------------------------------------------------
-// 租户域名（B6）：自有子域创建即 active；客户自带域名要按 TXT 验证所有权
+export const createServiceCategory = (data: {
+  code: string;
+  name: string;
+  description?: string;
+  commission_bps: number;
+  sort?: number;
+}) => apiPost<ServiceCategoryRecord>('/platform/service-categories', data);
+
+export const updateServiceCategory = (
+  id: number,
+  data: {
+    name?: string;
+    description?: string;
+    commission_bps?: number;
+    status?: 'active' | 'archived';
+    sort?: number;
+  },
+) => apiPut<ServiceCategoryRecord>(`/platform/service-categories/${id}`, data);
+
+export const assignTenantCategory = (tenantId: number, categoryId: number | null) =>
+  apiPut<{ tenant_id: number; service_category_id: number | null }>(
+    `/platform/tenants/${tenantId}/service-category`,
+    { service_category_id: categoryId },
+  );
+
+// ---------------------------------------------------------------------------// 租户域名（B6）：自有子域创建即 active；客户自带域名要按 TXT 验证所有权
 // ---------------------------------------------------------------------------
 
 export interface TenantDomainRecord {

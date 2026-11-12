@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_context, get_db, require_platform_permission
 from app.core.response import ok
 from app.models.billing import Plan
+from app.models.service_category import ServiceCategory
 from app.models.tenant import Tenant
 from app.schemas.billing import (
     InvoiceOut,
@@ -295,9 +297,14 @@ async def list_tenants_with_plan(
 ):
     """Tenant list enriched with plan / subscription / usage for the console."""
     tenants = await platform_service.list_tenants(db)
+    # 业务类目一次查完，避免逐租户查库
+    categories = {
+        row.id: row for row in (await db.scalars(select(ServiceCategory))).all()
+    }
     result = []
     for tenant in tenants:
         report = await billing_service.usage_report(db, tenant.id)
+        category = categories.get(tenant.service_category_id or 0)
         result.append(
             {
                 "id": tenant.id,
@@ -305,6 +312,16 @@ async def list_tenants_with_plan(
                 "slug": tenant.slug,
                 "status": tenant.status,
                 "created_at": tenant.created_at,
+                "service_category": (
+                    {
+                        "id": category.id,
+                        "code": category.code,
+                        "name": category.name,
+                        "commission_bps": category.commission_bps,
+                    }
+                    if category is not None
+                    else None
+                ),
                 "plan": report["plan"],
                 "subscription": report["subscription"],
                 "used": report["used"],

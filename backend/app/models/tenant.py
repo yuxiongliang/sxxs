@@ -22,6 +22,10 @@ class Tenant(Base, TimestampMixin):
     theme_color: Mapped[str | None] = mapped_column(String(16), nullable=True)
     # 账期：订单完成后资金需要冻结的天数，冻结期满才计入可结算余额。
     settlement_hold_days: Mapped[int] = mapped_column(Integer, default=7, server_default="7")
+    # 平台级业务类目：决定这家租户按哪个类目的比例被平台抽佣（空 = 未分类，不抽佣）
+    service_category_id: Mapped[int | None] = mapped_column(
+        ForeignKey("service_categories.id"), nullable=True, index=True
+    )
 
 
 class TenantDomain(Base, TimestampMixin):

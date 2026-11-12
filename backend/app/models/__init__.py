@@ -16,6 +16,7 @@ from app.models.permission import MemberRole, Permission, RolePermission
 from app.models.platform_setting import PlatformSetting
 from app.models.role import Role
 from app.models.seller import Seller, SellerMember, Shop
+from app.models.service_category import ServiceCategory
 from app.models.setting import SystemSetting
 from app.models.tenant import Tenant, TenantDomain, TenantMember
 from app.models.user import User
@@ -56,6 +57,7 @@ __all__ = [
     "Seller",
     "SellerMember",
     "SellerOrder",
+    "ServiceCategory",
     "SettlementBatch",
     "Shipment",
     "Shop",

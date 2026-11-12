@@ -8,6 +8,7 @@ from app.models.role import Role
 from app.models.setting import SystemSetting
 from app.models.tenant import Tenant, TenantMember
 from app.models.user import User
+from app.services import service_category as category_service
 from app.services import tenant_domains
 from app.services.setting import DEFAULT_SETTINGS
 
@@ -17,13 +18,24 @@ async def list_tenants(db: AsyncSession) -> list[Tenant]:
 
 
 async def create_tenant(
-    db: AsyncSession, name: str, slug: str, email: str, nickname: str, password: str
+    db: AsyncSession,
+    name: str,
+    slug: str,
+    email: str,
+    nickname: str,
+    password: str,
+    *,
+    service_category_id: int | None = None,
 ) -> Tenant:
     if (await db.scalars(select(Tenant).where(Tenant.slug == slug))).first():
         raise HTTPException(status_code=409, detail="租户 slug 已存在")
     tenant = Tenant(name=name, slug=slug, status="active")
     db.add(tenant)
     await db.flush()
+
+    # 开通时就归类；不传表示暂未分类（不抽佣），运营可后补
+    if service_category_id is not None:
+        await category_service.assign_tenant(db, tenant, service_category_id)
 
     user = (await db.scalars(select(User).where(User.email == email))).first()
     if user is None:
