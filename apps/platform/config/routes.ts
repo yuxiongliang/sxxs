@@ -31,6 +31,12 @@ export default [
     ],
   },
   {
+    path: '/users',
+    name: 'platformUsers',
+    icon: 'TeamOutlined',
+    component: './users',
+  },
+  {
     // 计费：只剩账单（套餐已并入「租户管理」）
     path: '/billing',
     name: 'billing',

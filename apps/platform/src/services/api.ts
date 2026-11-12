@@ -474,6 +474,37 @@ export const updateServiceCategory = (
   },
 ) => apiPut<ServiceCategoryRecord>(`/platform/service-categories/${id}`, data);
 
+export interface PlatformUserRecord {
+  id: number;
+  public_id: string;
+  username: string;
+  nickname: string;
+  email: string;
+  phone?: string | null;
+  role: string;
+  status: string;
+  is_platform_admin: boolean;
+  created_at: string;
+}
+
+/** 平台端全站用户（跨租户，只读）；租户控制台只能看到自己租户的成员 */
+export const listPlatformUsers = (params: {
+  current?: number;
+  pageSize?: number;
+  keyword?: string;
+  status?: string;
+}) => {
+  const query = new URLSearchParams();
+  if (params.current !== undefined) query.set('current', String(params.current));
+  if (params.pageSize !== undefined) query.set('pageSize', String(params.pageSize));
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.status) query.set('status', params.status);
+  const suffix = query.toString();
+  return apiGet<{ list: PlatformUserRecord[]; total: number }>(
+    `/platform/users${suffix ? `?${suffix}` : ''}`,
+  );
+};
+
 export interface CommissionRow {
   tenant_id: number;
   tenant_name: string;

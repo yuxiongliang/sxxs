@@ -167,6 +167,16 @@ const UserManagement: React.FC = () => {
 
   const columns: ProColumns<UserRecord>[] = [
     {
+      title: '用户ID',
+      dataIndex: 'public_id',
+      search: false,
+      fixed: 'left',
+      width: 260,
+      copyable: true,
+      ellipsis: true,
+      tooltip: '全站唯一的用户编号（随机 20 位），可直接粘到关键词框里搜索',
+    },
+    {
       title: '用户',
       dataIndex: 'nickname',
       search: false,
@@ -177,12 +187,7 @@ const UserManagement: React.FC = () => {
           <Avatar style={{ background: '#1677ff' }}>
             {record.nickname?.slice(0, 1)}
           </Avatar>
-          <div>
-            <div style={{ fontWeight: 600 }}>{record.nickname}</div>
-            <div style={{ color: '#8c8c8c', fontSize: 12 }}>
-              @{record.username}
-            </div>
-          </div>
+          <div style={{ fontWeight: 600 }}>{record.nickname}</div>
         </Space>
       ),
     },
@@ -190,7 +195,7 @@ const UserManagement: React.FC = () => {
       title: '关键词',
       dataIndex: 'keyword',
       hideInTable: true,
-      fieldProps: { placeholder: '用户名 / 昵称 / 邮箱 / 手机号' },
+      fieldProps: { placeholder: '用户名 / 昵称 / 邮箱 / 手机号 / 用户ID' },
     },
     {
       title: '邮箱',
@@ -198,17 +203,6 @@ const UserManagement: React.FC = () => {
       search: false,
       copyable: true,
       width: 200,
-    },
-    {
-      title: '用户ID',
-      dataIndex: 'public_id',
-      // 精确查询：ProTable 会把输入值作为 public_id 参数传给后端（走唯一索引）
-      search: true,
-      fieldProps: { placeholder: '粘贴用户ID精确查询' },
-      width: 260,
-      copyable: true,
-      ellipsis: true,
-      tooltip: '全站唯一的用户编号（随机 20 位），对外展示，不随主键变化',
     },
     { title: '手机号', dataIndex: 'phone', search: false, width: 130 },
     {
