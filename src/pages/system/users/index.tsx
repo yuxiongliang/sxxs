@@ -177,17 +177,20 @@ const UserManagement: React.FC = () => {
       tooltip: '全站唯一的用户编号（随机 20 位），可直接粘到关键词框里搜索',
     },
     {
-      title: '用户',
-      dataIndex: 'nickname',
+      // 展示登录账号（唯一、可直接对账），不再显示昵称
+      title: '用户名',
+      dataIndex: 'username',
       search: false,
       fixed: 'left',
-      width: 180,
+      width: 280,
+      copyable: true,
+      ellipsis: true,
       render: (_, record) => (
         <Space>
           <Avatar style={{ background: '#1677ff' }}>
-            {record.nickname?.slice(0, 1)}
+            {record.username?.slice(0, 1).toUpperCase()}
           </Avatar>
-          <div style={{ fontWeight: 600 }}>{record.nickname}</div>
+          <div style={{ fontWeight: 600 }}>{record.username}</div>
         </Space>
       ),
     },
