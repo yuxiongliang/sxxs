@@ -11,8 +11,11 @@ async def list_roles(
     page_size: int,
     keyword: str | None = None,
     status: str | None = None,
+    exclude_codes: frozenset[str] | None = None,
 ) -> tuple[list[Role], int]:
     conditions = []
+    if exclude_codes:
+        conditions.append(Role.code.notin_(tuple(exclude_codes)))
     if keyword:
         pattern = f"%{keyword}%"
         conditions.append(or_(Role.name.ilike(pattern), Role.code.ilike(pattern)))

@@ -77,6 +77,6 @@ async def set_role_permissions(
     db: AsyncSession = Depends(get_db),
 ):
     result = await role_service.set_role_permissions(
-        db, role_id, context.tenant.id, payload.permission_codes
+        db, role_id, context, payload.permission_codes
     )
     return ok(result, "角色权限已更新")
