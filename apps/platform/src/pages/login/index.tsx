@@ -16,7 +16,7 @@ export default function PlatformLoginPage() {
       const session = await login(values.username, values.password);
       tokens.set(session.access_token);
       const params = new URLSearchParams(window.location.search);
-      history.replace(params.get('redirect') || '/tenants');
+      history.replace(params.get('redirect') || '/tenants/list');
     } catch (error) {
       message.error(error instanceof Error ? error.message : '登录失败');
     } finally {
@@ -66,7 +66,10 @@ export default function PlatformLoginPage() {
               },
             ]}
           >
-            <Input.Password prefix={<LockOutlined />} autoComplete="current-password" />
+            <Input.Password
+              prefix={<LockOutlined />}
+              autoComplete="current-password"
+            />
           </Form.Item>
           <Button type="primary" htmlType="submit" block loading={loading}>
             {intl.formatMessage({ id: 'login.submit' })}

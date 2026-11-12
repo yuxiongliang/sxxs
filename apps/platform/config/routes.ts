@@ -4,25 +4,40 @@ export default [
     layout: false,
     component: './login',
   },
-  { path: '/', redirect: '/tenants' },
+  { path: '/', redirect: '/tenants/list' },
   {
+    // 租户管理：租户列表 / 套餐 / 服务类目
+    // 套餐原在「计费」下，挪进来之后旧链接 /billing/plans 仍会跳过来
     path: '/tenants',
-    name: 'tenants',
+    name: 'tenantManage',
     icon: 'ClusterOutlined',
-    component: './tenants',
+    routes: [
+      { path: '/tenants', redirect: '/tenants/list' },
+      {
+        path: '/tenants/list',
+        name: 'tenantList',
+        component: './tenants',
+      },
+      {
+        path: '/tenants/plans',
+        name: 'tenantPlans',
+        component: './billing/plans',
+      },
+      {
+        path: '/tenants/categories',
+        name: 'serviceCategories',
+        component: './tenants/categories',
+      },
+    ],
   },
   {
-    // 计费：套餐 / 账单 从原「租户与计费」页签拆成独立子菜单
+    // 计费：只剩账单（套餐已并入「租户管理」）
     path: '/billing',
     name: 'billing',
     icon: 'WalletOutlined',
     routes: [
-      { path: '/billing', redirect: '/billing/plans' },
-      {
-        path: '/billing/plans',
-        name: 'billingPlans',
-        component: './billing/plans',
-      },
+      { path: '/billing', redirect: '/billing/invoices' },
+      { path: '/billing/plans', redirect: '/tenants/plans' },
       {
         path: '/billing/invoices',
         name: 'billingInvoices',
@@ -30,8 +45,8 @@ export default [
       },
     ],
   },
-  // 租户概览已合并进 /tenants，旧链接仍可用
-  { path: '/overview', redirect: '/tenants' },
+  // 租户概览已合并进租户列表，旧链接仍可用
+  { path: '/overview', redirect: '/tenants/list' },
   {
     path: '/audit',
     name: 'audit',

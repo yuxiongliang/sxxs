@@ -409,6 +409,36 @@ export const listTenantOverview = () =>
   apiGet<TenantOverviewRecord[]>('/platform/overview/tenants');
 
 // ---------------------------------------------------------------------------
+// 服务类目（只读总览：平台侧跨租户查看各租户的经营类目）
+// ---------------------------------------------------------------------------
+
+export interface PlatformCategoryRecord {
+  id: number;
+  tenant_id: number;
+  tenant_name: string;
+  tenant_slug: string;
+  name: string;
+  slug: string;
+  parent_id: number | null;
+  sort: number;
+  status: string;
+  product_count: number;
+}
+
+export const listPlatformCategories = (params?: {
+  tenantId?: number;
+  q?: string;
+}) => {
+  const query = new URLSearchParams();
+  if (params?.tenantId !== undefined) query.set('tenant_id', String(params.tenantId));
+  if (params?.q) query.set('q', params.q);
+  const suffix = query.toString();
+  return apiGet<PlatformCategoryRecord[]>(
+    `/platform/categories${suffix ? `?${suffix}` : ''}`,
+  );
+};
+
+// ---------------------------------------------------------------------------
 // 租户域名（B6）：自有子域创建即 active；客户自带域名要按 TXT 验证所有权
 // ---------------------------------------------------------------------------
 
