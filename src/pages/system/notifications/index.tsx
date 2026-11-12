@@ -39,6 +39,7 @@ import {
   optionColor,
   optionLabel,
 } from '../utils';
+import ChannelPrefs from './ChannelPrefs';
 
 const AUDIENCE_OPTIONS = [
   { label: '全部用户', value: 'all' },
@@ -176,6 +177,10 @@ const handleRetry = async (record: NotificationRecord) => {
         title="通知模板由平台统一管理"
         description="平台负责模板与渠道策略；租户侧只保留发送记录、可用模板说明与渠道开关。站内信为强制渠道（欠费/安全类通知），不可关闭。"
       />
+      <div style={{ marginBottom: 16 }}>
+        <ChannelPrefs />
+      </div>
+
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={12} md={6}>
           <Card>

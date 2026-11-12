@@ -309,3 +309,39 @@ export async function saveTenantBrand(data: {
     request(`${API_PREFIX}/tenant/brand`, { method: 'PUT', data }),
   );
 }
+
+export interface NotificationChannelPref {
+  channel: string;
+  enabled: boolean;
+  mandatory: boolean;
+}
+
+export async function getNotificationPrefs() {
+  return unwrap<{ channels: NotificationChannelPref[] }>(
+    request(`${API_PREFIX}/notifications/prefs`, { method: 'GET' }),
+  );
+}
+
+export async function saveNotificationPref(channel: string, enabled: boolean) {
+  return unwrap<{ channel: string; enabled: boolean }>(
+    request(`${API_PREFIX}/notifications/prefs`, {
+      method: 'PUT',
+      data: { channel, enabled },
+    }),
+  );
+}
+
+export interface NotificationTemplateBrief {
+  code: string;
+  name: string;
+  channel: string;
+  subject: string;
+  variables: string[];
+  mandatory: boolean;
+}
+
+export async function listNotificationTemplates() {
+  return unwrap<NotificationTemplateBrief[]>(
+    request(`${API_PREFIX}/notifications/templates`, { method: 'GET' }),
+  );
+}
