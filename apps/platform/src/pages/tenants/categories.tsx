@@ -20,7 +20,7 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import PageShell from '@/components/PageShell';
 import type { ServiceCategoryRecord } from '@/services/api';
 import {
@@ -49,11 +49,19 @@ export default function ServiceCategoriesPage() {
   const [form] = Form.useForm<CategoryFormValues>();
   const [editing, setEditing] = useState<ServiceCategoryRecord | null>(null);
   const [open, setOpen] = useState(false);
+  const [keyword, setKeyword] = useState('');
 
   const categories = useQuery({
     queryKey: ['service-categories', 'all'],
     queryFn: () => listServiceCategories(true),
   });
+
+  // 按分类名称做前端过滤：分类数量很小（十几个），不必为搜索加后端参数
+  const filtered = useMemo(() => {
+    const rows = categories.data ?? [];
+    const key = keyword.trim();
+    return key ? rows.filter((item) => item.name.includes(key)) : rows;
+  }, [categories.data, keyword]);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['service-categories'] });
@@ -99,7 +107,7 @@ export default function ServiceCategoriesPage() {
   });
 
   const columns: ColumnsType<ServiceCategoryRecord> = [
-    { title: '类目名称', dataIndex: 'name', width: 200 },
+    { title: '分类名称', dataIndex: 'name', width: 200 },
     {
       title: '抽佣比例',
       dataIndex: 'commission_bps',
@@ -179,11 +187,18 @@ export default function ServiceCategoriesPage() {
 
   return (
     <PageShell
-      title="服务类目"
-      subTitle="平台级业务类目：决定租户归属，以及平台按多少比例向该租户抽佣"
+      title="租户分类"
+      subTitle="平台级业务分类：决定租户归属，以及平台按多少比例向该租户抽佣"
       icon={<AppstoreOutlined />}
       extra={
         <Space>
+          <Input.Search
+            allowClear
+            placeholder="搜索分类名称"
+            style={{ width: 220 }}
+            onSearch={(value) => setKeyword(value)}
+            onChange={(event) => setKeyword(event.target.value)}
+          />
           <Button
             icon={<ReloadOutlined />}
             onClick={() => categories.refetch()}
@@ -200,7 +215,7 @@ export default function ServiceCategoriesPage() {
               setOpen(true);
             }}
           >
-            新建类目
+            新建分类
           </Button>
         </Space>
       }
@@ -219,7 +234,7 @@ export default function ServiceCategoriesPage() {
           size="small"
           loading={categories.isLoading}
           columns={columns}
-          dataSource={categories.data ?? []}
+          dataSource={filtered}
           pagination={false}
         />
       </Card>

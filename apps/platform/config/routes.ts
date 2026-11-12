@@ -37,22 +37,32 @@ export default [
     component: './users',
   },
   {
-    // 计费：只剩账单（套餐已并入「租户管理」）
+    // 总部财务：下面分「SAAS 财务」（账单 / 抽佣台账）
     path: '/billing',
     name: 'billing',
     icon: 'WalletOutlined',
     routes: [
-      { path: '/billing', redirect: '/billing/invoices' },
+      { path: '/billing', redirect: '/billing/saas/invoices' },
+      // 旧链接兼容
       { path: '/billing/plans', redirect: '/tenants/plans' },
+      { path: '/billing/invoices', redirect: '/billing/saas/invoices' },
+      { path: '/billing/commission', redirect: '/billing/saas/commission' },
       {
-        path: '/billing/invoices',
-        name: 'billingInvoices',
-        component: './billing/invoices',
-      },
-      {
-        path: '/billing/commission',
-        name: 'billingCommission',
-        component: './billing/commission',
+        path: '/billing/saas',
+        name: 'billingSaas',
+        routes: [
+          { path: '/billing/saas', redirect: '/billing/saas/invoices' },
+          {
+            path: '/billing/saas/invoices',
+            name: 'billingInvoices',
+            component: './billing/invoices',
+          },
+          {
+            path: '/billing/saas/commission',
+            name: 'billingCommission',
+            component: './billing/commission',
+          },
+        ],
       },
     ],
   },

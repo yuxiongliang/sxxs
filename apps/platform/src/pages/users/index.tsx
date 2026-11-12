@@ -68,6 +68,27 @@ export default function PlatformUsersPage() {
     },
     { title: '邮箱', dataIndex: 'email', width: 240, ellipsis: true },
     {
+      title: '角色',
+      dataIndex: 'role',
+      width: 140,
+      render: (value: string) => (
+        <Space size={4}>
+          <Tag>{labelOf(USER_ROLE, value)}</Tag>
+          {value === 'platform_admin' ? <Tag color="gold">平台</Tag> : null}
+        </Space>
+      ),
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 100,
+      render: (value: string) => (
+        <Tag color={value === 'active' ? 'green' : 'default'}>
+          {labelOf(USER_STATUS, value)}
+        </Tag>
+      ),
+    },
+    {
       title: '操作',
       width: 110,
       render: (_, record) =>
@@ -94,27 +115,6 @@ export default function PlatformUsersPage() {
             </Button>
           </Popconfirm>
         ),
-    },
-    {
-      title: '角色',
-      dataIndex: 'role',
-      width: 140,
-      render: (value: string) => (
-        <Space size={4}>
-          <Tag>{labelOf(USER_ROLE, value)}</Tag>
-          {value === 'platform_admin' ? <Tag color="gold">平台</Tag> : null}
-        </Space>
-      ),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
-      render: (value: string) => (
-        <Tag color={value === 'active' ? 'green' : 'default'}>
-          {labelOf(USER_STATUS, value)}
-        </Tag>
-      ),
     },
   ];
 

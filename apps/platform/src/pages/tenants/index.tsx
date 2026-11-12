@@ -166,9 +166,6 @@ const PlatformTenantsPage: React.FC = () => {
             <ClusterOutlined style={{ color: '#1677ff' }} />
             <strong>{record.owner?.username ?? '—'}</strong>
           </Space>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {record.name} · {record.slug}
-          </Typography.Text>
         </Space>
       ),
     },
