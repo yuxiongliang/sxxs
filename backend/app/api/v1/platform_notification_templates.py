@@ -50,6 +50,14 @@ async def list_templates(
     return ok([_serialize(row) for row in rows])
 
 
+@router.get("/variables", response_model=ApiResponse[list[dict]])
+async def list_variables(
+    _context=Depends(require_platform_permission("platform:setting:read")),
+):
+    """可用变量清单 + 中文释义。前端据此渲染「可用变量」说明，新增变量自动出现。"""
+    return ok(template_service.variable_catalog())
+
+
 @router.put("/{scope}/{code}", response_model=ApiResponse[dict])
 async def save_template(
     scope: str,

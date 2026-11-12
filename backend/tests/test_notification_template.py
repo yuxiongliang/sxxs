@@ -45,7 +45,8 @@ async def test_platform_can_save_template_and_extracts_variables(client, platfor
     )
     assert response.status_code == 200, response.text
     data = response.json()["data"]
-    assert data["scope"] == "tenant"
+    # 传老的 tenant 会被归一成 tenant_buyer（买家档），避免历史数据消失
+    assert data["scope"] == "tenant_buyer"
     assert set(data["variables"]) == {"tenant_name", "buyer_name", "order_no"}
     assert data["mandatory"] is True
 

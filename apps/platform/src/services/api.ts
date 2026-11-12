@@ -301,12 +301,17 @@ export const moderationDownloadUrl = (id: number) =>
   `/api/v1/platform/moderation/${id}/download`;
 
 // ---------------------------------------------------------------------------
-// 通知模板（scope 区分品牌归属：platform→租户 / tenant→买家）
+// 通知模板（scope 三档：platform→租户 / tenant_buyer→买家 / tenant_seller→卖家）
 // ---------------------------------------------------------------------------
+
+export type NotificationTemplateScope =
+  | 'platform'
+  | 'tenant_buyer'
+  | 'tenant_seller';
 
 export interface NotificationTemplateRecord {
   id: number;
-  scope: 'platform' | 'tenant';
+  scope: NotificationTemplateScope;
   code: string;
   name: string;
   channel: string;
@@ -319,13 +324,24 @@ export interface NotificationTemplateRecord {
   updated_at: string;
 }
 
-export const listNotificationTemplates = (scope?: 'platform' | 'tenant') =>
+/** 可用变量（含中文释义与示例）：新增变量由后端提供，前端不写死。 */
+export interface NotificationVariable {
+  name: string;
+  label: string;
+  description: string;
+  example: string;
+}
+
+export const listNotificationTemplates = (scope?: NotificationTemplateScope) =>
   apiGet<NotificationTemplateRecord[]>(
     `/platform/notification-templates${scope ? `?scope=${scope}` : ''}`,
   );
 
+export const listNotificationVariables = () =>
+  apiGet<NotificationVariable[]>('/platform/notification-templates/variables');
+
 export const saveNotificationTemplate = (
-  scope: string,
+  scope: NotificationTemplateScope,
   code: string,
   payload: {
     name: string;

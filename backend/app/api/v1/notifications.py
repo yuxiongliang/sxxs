@@ -90,7 +90,10 @@ async def list_available_templates(
     租户端不再提供「自己写模板并发通知」的能力（发送按钮已隐藏），
     这里只用于展示「有哪些通知会发给买家」。
     """
-    rows = await template_service.list_templates(db, scope="tenant", only_enabled=True)
+    # 买家 / 卖家两档都给租户看；老数据里的 tenant 视为买家
+    rows = await template_service.list_templates(
+        db, scopes=template_service.TENANT_SCOPES, only_enabled=True
+    )
     return ok(
         [
             {

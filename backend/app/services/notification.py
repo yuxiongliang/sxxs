@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dao import notification as notification_dao
 from app.models.notification import Notification
 from app.models.notification_template import NotificationTemplate
-from app.models.tenant import Tenant
+from app.models.tenant import Tenant, TenantDomain
 from app.schemas.notification import NotificationCreate, NotificationStats
 from app.services import notification_template as template_service
 from app.services import setting_resolver
@@ -35,6 +35,21 @@ async def list_notifications(
     )
 
 
+async def _primary_domain(db: AsyncSession, tenant_id: int) -> str:
+    """租户已生效的域名（B6）；没绑定时返回空串。"""
+    host = (
+        await db.scalars(
+            select(TenantDomain.host)
+            .where(
+                TenantDomain.tenant_id == tenant_id,
+                TenantDomain.status == "active",
+            )
+            .order_by(TenantDomain.id)
+        )
+    ).first()
+    return host or ""
+
+
 async def send_notification(
     db: AsyncSession, payload: NotificationCreate, tenant_id: int = 1
 ) -> Notification:
@@ -53,26 +68,38 @@ async def send_notification(
     title = payload.title
     content = payload.content
     if payload.template:
-        template = (
-            await db.scalars(
-                select(NotificationTemplate).where(
-                    NotificationTemplate.scope == "tenant",
-                    NotificationTemplate.code == payload.template,
-                    NotificationTemplate.enabled.is_(True),
+        candidates = list(
+            (
+                await db.scalars(
+                    select(NotificationTemplate).where(
+                        NotificationTemplate.scope.in_(template_service.TENANT_SCOPES),
+                        NotificationTemplate.code == payload.template,
+                        NotificationTemplate.enabled.is_(True),
+                    )
                 )
-            )
-        ).first()
-        if template is None:
+            ).all()
+        )
+        if not candidates:
             raise HTTPException(
                 status_code=400,
                 detail=f"通知模板不存在或已停用：{payload.template}",
             )
+        if len(candidates) > 1:
+            # 买家/卖家各有一份同 code 模板时不猜：猜错就是把卖家邮件发给买家
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"模板 {payload.template} 同时存在于 "
+                    f"{'、'.join(sorted(row.scope for row in candidates))}，请按作用域分别命名"
+                ),
+            )
+        template = candidates[0]
         tenant = await db.get(Tenant, tenant_id)
         tenant_name = (tenant.display_name or tenant.name) if tenant else ""
         context = {
             "tenant_name": tenant_name,
             "tenant_short_name": tenant_name,
-            "tenant_domain": "",  # B6（自定义域名）上线后填真实域名
+            "tenant_domain": await _primary_domain(db, tenant_id),
             "buyer_name": payload.audience or "",
             "order_no": "",
             "amount": "",
