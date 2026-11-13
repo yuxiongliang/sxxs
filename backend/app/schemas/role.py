@@ -12,6 +12,8 @@ class RoleOut(BaseModel):
     description: str | None = None
     status: str
     sort: int
+    # NULL = 系统共享角色（所有租户只读可见）；非 NULL = 该租户自建角色
+    tenant_id: int | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -112,6 +112,8 @@ export interface RoleRecord {
   description?: string;
   status: 'active' | 'disabled';
   sort: number;
+  /** null = 系统内置角色（全租户共享、只读）；有值 = 本租户自建 */
+  tenant_id?: number | null;
   created_at: string;
   updated_at: string;
 }

@@ -20,6 +20,7 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import React, { useState } from 'react';
@@ -121,7 +122,14 @@ const RoleManagementPage: React.FC = () => {
         <Space>
           <SafetyCertificateOutlined style={{ color: '#1677ff' }} />
           <Space orientation="vertical" size={0}>
-            <span style={{ fontWeight: 600 }}>{record.name}</span>
+            <Space size={6}>
+              <span style={{ fontWeight: 600 }}>{record.name}</span>
+              {record.tenant_id == null ? (
+                <Tag color="blue">系统内置</Tag>
+              ) : (
+                <Tag>本租户</Tag>
+              )}
+            </Space>
             <span style={{ color: '#8c8c8c', fontSize: 12 }}>
               {record.code}
             </span>
@@ -148,33 +156,54 @@ const RoleManagementPage: React.FC = () => {
     {
       title: '操作',
       width: 150,
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => openPermissions(record)}
-          >
-            权限
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => openEdit(record)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定删除该角色？"
-            onConfirm={() => handleDelete(record)}
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
+      render: (_, record) => {
+        // 系统内置角色全租户共享、只读：后端会直接 403，按钮就不该可点
+        const readonly = record.tenant_id == null;
+        if (readonly) {
+          return (
+            <Tooltip title="系统内置角色为全租户共享、只读；如需调整请新增一个本租户角色">
+              <Space>
+                <Button type="link" size="small" disabled>
+                  权限
+                </Button>
+                <Button type="link" size="small" disabled>
+                  编辑
+                </Button>
+                <Button type="link" size="small" disabled>
+                  删除
+                </Button>
+              </Space>
+            </Tooltip>
+          );
+        }
+        return (
+          <Space>
+            <Button
+              type="link"
+              size="small"
+              onClick={() => openPermissions(record)}
+            >
+              权限
             </Button>
-          </Popconfirm>
-        </Space>
-      ),
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => openEdit(record)}
+            >
+              编辑
+            </Button>
+            <Popconfirm
+              title="确定删除该角色？"
+              onConfirm={() => handleDelete(record)}
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                删除
+              </Button>
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 

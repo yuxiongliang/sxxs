@@ -7,9 +7,7 @@ from tests.conftest import bearer
 
 async def test_tenants_list_exposes_owner(client, platform_token):
     rows = (
-        await client.get(
-            "/api/v1/platform/tenants-list", headers=bearer(platform_token)
-        )
+        await client.get("/api/v1/platform/tenants-list", headers=bearer(platform_token))
     ).json()["data"]
     demo = next(row for row in rows if row["slug"] == "demo")
     assert demo["owner"] is not None, "租户列表必须带管理员信息"
@@ -52,9 +50,7 @@ async def test_platform_can_disable_and_enable_user(client, admin_token, platfor
 
 async def test_cannot_disable_platform_admin_or_self(client, platform_token):
     users = (
-        await client.get(
-            "/api/v1/platform/users?pageSize=100", headers=bearer(platform_token)
-        )
+        await client.get("/api/v1/platform/users?pageSize=100", headers=bearer(platform_token))
     ).json()["data"]["list"]
     admin_user = next(row for row in users if row["is_platform_admin"])
 
@@ -69,9 +65,7 @@ async def test_cannot_disable_platform_admin_or_self(client, platform_token):
 
 async def test_invalid_status_is_rejected(client, admin_token, platform_token):
     users = (
-        await client.get(
-            "/api/v1/platform/users?pageSize=5", headers=bearer(platform_token)
-        )
+        await client.get("/api/v1/platform/users?pageSize=5", headers=bearer(platform_token))
     ).json()["data"]["list"]
     target = next(row for row in users if not row["is_platform_admin"])
     response = await client.put(
