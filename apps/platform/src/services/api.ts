@@ -50,7 +50,6 @@ export interface PlanRecord {
   /** 周期套餐的时长（月）；lifetime/custom 为 null */
   duration_months?: number | null;
   trial_days: number;
-  quotas?: Record<string, number | null> | null;
   features?: string[] | null;
   status: string;
   sort: number;
@@ -76,8 +75,6 @@ export interface TenantWithPlan extends TenantRecord {
   } | null;
   subscription?: SubscriptionRecord | null;
   used: Record<string, number>;
-  quotas: Record<string, number | null>;
-  exceeded: string[];
   days_left?: number | null;
   /** 租户管理员（tenant_owner）：列表展示用户名与用户ID */
   owner?: { public_id: string; username: string } | null;
@@ -137,7 +134,6 @@ export const createPlan = (data: {
   period?: string;
   duration_months?: number | null;
   trial_days?: number;
-  quotas?: Record<string, number | null>;
   features?: string[];
 }) => apiPost<PlanRecord>('/platform/plans', data);
 

@@ -10,7 +10,6 @@ from app.models.order import SellerOrder, Shipment
 from app.models.seller import Seller, SellerMember, Shop
 from app.schemas.commerce import SellerProductCreate
 from app.services import audit as audit_service
-from app.services import billing as billing_service
 from app.services import finance as finance_service
 from app.services.auth import AuthContext
 
@@ -80,7 +79,6 @@ async def create_seller_product(
     seller, shop = await current_seller(db, context)
     if shop is None:
         raise HTTPException(status_code=400, detail="卖家店铺不存在")
-    await billing_service.check_quota(db, context.tenant.id, "products")
     product = Product(
         tenant_id=context.tenant.id,
         seller_id=seller.id,

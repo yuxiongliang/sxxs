@@ -1,7 +1,7 @@
-"""SaaS billing: plans, subscriptions, usage/quota, invoices, tenant lifecycle.
+"""SaaS billing: plans, subscriptions, usage, invoices, tenant lifecycle.
 
 Plan §16 Phase 5 acceptance criteria covered:
-  plans / subscriptions / invoices / usage / quota / feature flags, plus
+  plans / subscriptions / invoices / usage / feature flags, plus
   tenant edit / suspend / resume / renew.
 """
 
@@ -70,7 +70,6 @@ async def test_seeded_plan_catalogue(client, admin_token, platform_token):
     assert buyout["period"] == "lifetime"
     assert buyout["price_cents"] == 999900
     assert buyout["trial_days"] == 0
-    assert buyout["quotas"] == {"products": None, "members": None}
 
     # 历史套餐下架但保留行（历史订阅/账单还引用它们）
     archived = await client.get(
@@ -85,7 +84,6 @@ async def test_create_plan_and_reject_duplicate_code(client, admin_token, platfo
         "code": "pytest-plan",
         "name": "测试套餐",
         "price_cents": 1000,
-        "quotas": {"products": 10, "members": 3},
         "features": ["portal"],
     }
     created = await client.post(
@@ -141,7 +139,6 @@ async def test_demo_tenant_is_on_the_pro_plan(client, admin_token, platform_toke
     assert report["plan"]["code"] == "pro"
     assert report["subscription"]["status"] in {"active", "trialing"}
     assert "im" in report["plan"]["features"]
-    assert report["quotas"]["products"] == 5000
 
 
 async def test_new_tenant_gets_the_buyout_plan_without_trial(client, admin_token, platform_token):
@@ -171,7 +168,7 @@ async def test_usage_counts_reflect_business_data(client, admin_token, platform_
     ).json()["data"]
     assert report["used"]["products"] >= 1
     assert report["used"]["members"] >= 1
-    assert report["remaining"]["products"] == 5000 - report["used"]["products"]
+    assert report["plan"]["code"] == "pro"
 
 
 async def test_change_plan(client, admin_token, platform_token):
@@ -203,67 +200,6 @@ async def test_change_plan(client, admin_token, platform_token):
 # --------------------------------------------------------------------------- #
 # Quota enforcement
 # --------------------------------------------------------------------------- #
-
-
-async def test_member_quota_is_enforced(client, admin_token, db_session, platform_token):
-    """A tenant on a plan with members=1 cannot add a second member."""
-    created = await _create_other_tenant(client, platform_token)
-    tiny = (
-        await client.post(
-            "/api/v1/platform/plans",
-            headers=bearer(platform_token),
-            json={"code": "tiny", "name": "极小套餐", "quotas": {"products": 1, "members": 1}},
-        )
-    ).json()["data"]
-    await client.post(
-        f"/api/v1/platform/tenants/{created['id']}/subscription",
-        headers=bearer(platform_token),
-        json={"plan_id": tiny["id"]},
-    )
-
-    token = await _other_token(client)
-    blocked = await client.post(
-        "/api/v1/users",
-        headers=bearer(token),
-        json={
-            "username": "quota_victim",
-            "nickname": "配额",
-            "email": "quota_victim@example.com",
-            "role": "viewer",
-            "password": "Quota@123456",
-        },
-    )
-    assert blocked.status_code == 403, blocked.text
-    assert "配额" in blocked.json()["message"]
-
-
-async def test_product_quota_is_enforced(
-    client, admin_token, operator_token, db_session, platform_token
-):
-    """Switch the demo tenant to a products=0 plan and seller listing must fail."""
-    zero = (
-        await client.post(
-            "/api/v1/platform/plans",
-            headers=bearer(platform_token),
-            json={"code": "zero-products", "name": "零商品", "quotas": {"products": 0}},
-        )
-    ).json()["data"]
-    original = db_session  # keep the fixture alive for the transaction
-    assert original is not None
-
-    await client.post(
-        "/api/v1/platform/tenants/1/subscription",
-        headers=bearer(platform_token),
-        json={"plan_id": zero["id"]},
-    )
-
-    response = await client.post(
-        "/api/v1/portal/seller/products",
-        headers=bearer(operator_token),
-        json={"name": "配额拦截商品", "price_cents": 1000, "stock": 1},
-    )
-    assert response.status_code == 403
-    assert "配额" in response.json()["message"]
 
 
 # --------------------------------------------------------------------------- #

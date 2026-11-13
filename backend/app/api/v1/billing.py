@@ -77,7 +77,6 @@ async def create_plan(
         starts_at=payload.starts_at,
         ends_at=payload.ends_at,
         trial_days=payload.trial_days,
-        quotas=payload.quotas,
         features=payload.features or [],
         sort=payload.sort,
         status=payload.status,
@@ -371,8 +370,6 @@ async def list_tenants_with_plan(
                 "plan": report["plan"],
                 "subscription": report["subscription"],
                 "used": report["used"],
-                "quotas": report["quotas"],
-                "exceeded": report["exceeded"],
                 "days_left": report["days_left"],
             }
         )
@@ -391,5 +388,5 @@ async def my_subscription(
     context: AuthContext = Depends(get_current_context),
     db: AsyncSession = Depends(get_db),
 ):
-    """Current plan, quotas, usage and remaining days for the caller's tenant."""
+    """Current plan, usage and remaining days for the caller's tenant."""
     return ok(await billing_service.usage_report(db, context.tenant.id))

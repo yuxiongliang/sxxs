@@ -12,7 +12,6 @@ from app.models.permission import MemberRole
 from app.models.tenant import TenantMember
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
-from app.services import billing as billing_service
 from app.services import role as role_service
 from app.services.permission import bump_permission_version
 
@@ -90,7 +89,6 @@ async def create_user(db: AsyncSession, payload: UserCreate, tenant_id: int = 1)
     if payload.status not in {"active", "disabled"}:
         raise HTTPException(status_code=400, detail="状态不合法")
     await _validate_role(db, payload.role)
-    await billing_service.check_quota(db, tenant_id, "members")
     department_name = await _validate_department(db, payload.department_id, tenant_id)
 
     data = payload.model_dump(exclude={"password"})

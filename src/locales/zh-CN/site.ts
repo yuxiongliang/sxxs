@@ -54,7 +54,7 @@ export default {
     'WebSocket 实时会话、已读回执、图片消息，违规内容举报后可下架取证。',
   'site.feature.billing.title': '计费与审计',
   'site.feature.billing.desc':
-    '套餐、订阅、账单、配额与功能开关，关键操作全部落入审计日志。',
+    '套餐、订阅、账单与功能开关，关键操作全部落入审计日志。',
 
   'site.modules.title': '功能模块',
   'site.modules.subtitle': '十二个模块，覆盖运营日常。',

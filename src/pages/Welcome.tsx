@@ -11,7 +11,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useModel } from '@umijs/max';
-import { Button, Card, Col, Progress, Row, Space, Tag, Typography } from 'antd';
+import { Button, Card, Col, Row, Space, Tag, Typography } from 'antd';
 import { getDashboardOverview } from '@/services/dashboard/api';
 
 /** 平台端是独立系统（赛霄玄思 SaaS 管理平台），这里只做跨系统跳转。 */
@@ -53,15 +53,15 @@ const CAPABILITIES = [
   {
     icon: <CloudServerOutlined />,
     title: 'SaaS 计费与审计',
-    desc: '套餐、订阅、账单、配额与功能开关，关键操作全部落审计日志。',
+    desc: '套餐、订阅、账单与功能开关，关键操作全部落审计日志。',
     href: PLATFORM_CONSOLE_URL,
   },
 ];
 
 const STEPS = [
   {
-    title: '确认套餐与配额',
-    desc: '在「平台管理 > 租户」查看订阅状态、商品与成成员配额。',
+    title: '确认套餐',
+    desc: '在「平台管理 > 租户」查看订阅状态与套餐周期。',
     href: PLATFORM_CONSOLE_URL,
   },
   {
@@ -114,10 +114,6 @@ export default function WelcomePage() {
   const user = initialState?.currentUser;
   const tenant = initialState?.currentTenant;
   const usage = overview?.usage;
-  const quotaPercent = (used?: number, quota?: number | null) => {
-    if (!used || quota === null || quota === undefined || quota <= 0) return 0;
-    return Math.min(100, Math.round((used / quota) * 100));
-  };
 
   return (
     <div>
@@ -189,7 +185,7 @@ export default function WelcomePage() {
         </Col>
 
         <Col xs={24} xl={8}>
-          <Card title="当前环境" size="small" style={{ marginBottom: 16 }}>
+          <Card title="套餐详情" size="small" style={{ marginBottom: 16 }}>
             <Row gutter={[8, 16]}>
               <Col span={12}>
                 <StatBlock
@@ -212,42 +208,7 @@ export default function WelcomePage() {
                   }
                 />
               </Col>
-              <Col span={12}>
-                <StatBlock
-                  label="商品用量"
-                  value={
-                    (usage?.products_used ?? '—') +
-                    ' / ' +
-                    (usage?.products_quota ?? '不限')
-                  }
-                />
-              </Col>
-              <Col span={12}>
-                <StatBlock
-                  label="成员用量"
-                  value={
-                    (usage?.members_used ?? '—') +
-                    ' / ' +
-                    (usage?.members_quota ?? '不限')
-                  }
-                />
-              </Col>
             </Row>
-            <div style={{ marginTop: 12 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {'商品配额已用 ' +
-                  quotaPercent(usage?.products_used, usage?.products_quota) +
-                  '%'}
-              </Text>
-              <Progress
-                percent={quotaPercent(
-                  usage?.products_used,
-                  usage?.products_quota,
-                )}
-                showInfo={false}
-                size="small"
-              />
-            </div>
           </Card>
 
           <Card title="快捷操作" size="small">

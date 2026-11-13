@@ -4,7 +4,7 @@ Three layers of enforcement:
 
 1. **Tenant status** — ``suspended`` tenants fail closed in ``context_from_payload``
    (403 「租户不可用」), so suspending a tenant straight away blocks every API call.
-2. **Quota** — ``plan.quotas`` limits countable resources (products, members).
+2. **Feature gates** — ``plan.features`` decides which modules a tenant can use.
    A missing key or ``None`` means unlimited.
 3. **Feature flags** — ``plan.features`` lists unlocked capability keys, exposed to
    the tenant so the UI can hide unsupported modules.
@@ -41,8 +41,6 @@ DEFAULT_PLAN_CODE = "buyout"
 DOWNGRADE_PLAN_CODE = "free"
 # Days a tenant keeps full service after an invoice falls due before downgrading.
 DEFAULT_GRACE_DAYS = 7
-# Quota keys understood by ``check_quota``.
-QUOTA_KEYS = ("products", "members")
 
 
 # --------------------------------------------------------------------------- #
@@ -295,7 +293,7 @@ async def _downgrade_to_free(
     invoice: Invoice,
     moment: datetime,
 ) -> None:
-    """Grace window closed: keep the tenant usable, but on free quotas."""
+    """Grace window closed: keep the tenant usable, but on the free plan."""
     previous_plan_id = subscription.plan_id
     subscription.plan_id = free_plan.id
     subscription.status = "active"
@@ -450,7 +448,7 @@ async def run_billing_cycle(
 
 
 # --------------------------------------------------------------------------- #
-# Usage & quota
+# Usage
 # --------------------------------------------------------------------------- #
 
 
@@ -489,24 +487,10 @@ async def compute_usage(db: AsyncSession, tenant_id: int) -> dict[str, int]:
 
 
 async def usage_report(db: AsyncSession, tenant_id: int) -> dict:
-    """Usage joined with the plan's limits and feature flags."""
+    """Usage joined with the plan's feature flags."""
     subscription = await get_subscription(db, tenant_id)
     plan = await db.get(Plan, subscription.plan_id) if subscription else None
     used = await compute_usage(db, tenant_id)
-
-    quotas: dict[str, int | None] = {}
-    remaining: dict[str, int | None] = {}
-    exceeded: list[str] = []
-    if plan is not None:
-        quotas = dict(plan.quotas or {})
-        for metric, limit in quotas.items():
-            current = used.get(metric, 0)
-            if limit is None:
-                remaining[metric] = None
-                continue
-            remaining[metric] = max(0, int(limit) - current)
-            if current >= int(limit):
-                exceeded.append(metric)
 
     now = datetime.now(UTC)
     return {
@@ -536,37 +520,10 @@ async def usage_report(db: AsyncSession, tenant_id: int) -> dict:
             else None
         ),
         "used": used,
-        "quotas": quotas,
-        "remaining": remaining,
-        "exceeded": exceeded,
         "days_left": (
             max(0, (subscription.current_period_end - now).days) if subscription else None
         ),
     }
-
-
-async def check_quota(db: AsyncSession, tenant_id: int, metric: str) -> None:
-    """Raise 403 when adding one more unit would exceed the plan quota."""
-    if metric not in QUOTA_KEYS:
-        return
-    subscription = await get_subscription(db, tenant_id)
-    if subscription is None:
-        return
-    plan = await db.get(Plan, subscription.plan_id)
-    if plan is None:
-        return
-    quotas = plan.quotas or {}
-    if metric not in quotas:
-        return
-    limit = quotas[metric]
-    if limit is None:
-        return
-    used = await compute_usage(db, tenant_id)
-    if used.get(metric, 0) >= int(limit):
-        raise HTTPException(
-            status_code=403,
-            detail=f"已超出套餐配额：{metric} 上限 {limit}",
-        )
 
 
 async def has_feature(db: AsyncSession, tenant_id: int, feature: str) -> bool:

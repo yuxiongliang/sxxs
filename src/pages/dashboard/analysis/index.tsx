@@ -6,7 +6,6 @@ import {
   Card,
   Col,
   Empty,
-  Progress,
   Row,
   Segmented,
   Skeleton,
@@ -118,11 +117,6 @@ export default function AnalysisPage() {
       render: (value: number) => formatCents(value),
     },
   ];
-
-  const quotaPercent = (used: number, quota: number | null) => {
-    if (quota === null || quota <= 0) return 0;
-    return Math.min(100, Math.round((used / quota) * 100));
-  };
 
   return (
     <div>
@@ -293,64 +287,28 @@ export default function AnalysisPage() {
         </Col>
         <Col xs={24} xl={10}>
           <Card
-            title="套餐用量"
+            title="套餐详情"
             extra={
               <Tag color="blue">
                 {usage.plan_name ?? usage.plan ?? '未订阅'}
               </Tag>
             }
           >
-            <div style={{ marginBottom: 12 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: 13,
-                }}
-              >
-                <span>商品</span>
-                <span>
-                  {usage.products_used}
-                  {' / '}
-                  {usage.products_quota === null
-                    ? '不限'
-                    : usage.products_quota}
-                </span>
+            <div style={{ display: 'flex', gap: 40 }}>
+              <div>
+                <div style={{ color: '#8c8c8c', fontSize: 12 }}>订阅状态</div>
+                <div style={{ fontSize: 20, fontWeight: 600 }}>
+                  {usage.subscription_status ?? '—'}
+                </div>
               </div>
-              <Progress
-                percent={quotaPercent(
-                  usage.products_used,
-                  usage.products_quota,
-                )}
-                showInfo={false}
-              />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: 13,
-                }}
-              >
-                <span>成员</span>
-                <span>
-                  {usage.members_used}
-                  {' / '}
-                  {usage.members_quota === null ? '不限' : usage.members_quota}
-                </span>
+              <div>
+                <div style={{ color: '#8c8c8c', fontSize: 12 }}>剩余天数</div>
+                <div style={{ fontSize: 20, fontWeight: 600 }}>
+                  {usage.days_left === null || usage.days_left === undefined
+                    ? '—'
+                    : `${usage.days_left} 天`}
+                </div>
               </div>
-              <Progress
-                percent={quotaPercent(usage.members_used, usage.members_quota)}
-                showInfo={false}
-              />
-            </div>
-            <div style={{ color: '#999', fontSize: 12 }}>
-              {'订阅状态 ' +
-                (usage.subscription_status ?? '—') +
-                ' · 剩余 ' +
-                (usage.days_left ?? '—') +
-                ' 天'}
             </div>
           </Card>
         </Col>

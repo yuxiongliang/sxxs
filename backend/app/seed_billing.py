@@ -30,7 +30,6 @@ ARCHIVED_PLANS = [
         "price_cents": 0,
         "period": "monthly",
         "trial_days": 0,
-        "quotas": {"products": 50, "members": 5},
         "features": ["portal"],
         "sort": 90,
     },
@@ -41,7 +40,6 @@ ARCHIVED_PLANS = [
         "price_cents": 99000,
         "period": "monthly",
         "trial_days": 0,
-        "quotas": {"products": 5000, "members": 50},
         "features": ["portal", "im", "finance", "commission"],
         "sort": 91,
     },
@@ -52,7 +50,6 @@ ARCHIVED_PLANS = [
         "price_cents": 999000,
         "period": "yearly",
         "trial_days": 0,
-        "quotas": {"products": None, "members": None},
         "features": [
             "portal",
             "im",
@@ -75,7 +72,6 @@ SEED_PLANS = [
         "period": "lifetime",
         # 买断不留试用：schema 层也会拦住 trial_days>0 的组合
         "trial_days": 0,
-        "quotas": {"products": None, "members": None},
         "features": [
             "portal",
             "im",
@@ -95,14 +91,13 @@ async def seed_billing_data(db: AsyncSession) -> None:
         if existing is None:
             db.add(Plan(status="active", **item))
         else:
-            # 已存在就对齐口径（价格、周期、配额可改，但状态保持 active）
+            # 已存在就对齐口径（价格、周期可改，但状态保持 active）
             existing.status = "active"
             existing.name = item["name"]
             existing.description = item["description"]
             existing.price_cents = item["price_cents"]
             existing.period = item["period"]
             existing.trial_days = item["trial_days"]
-            existing.quotas = item["quotas"]
             existing.features = item["features"]
     await db.flush()
 

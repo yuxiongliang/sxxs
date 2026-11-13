@@ -2,7 +2,7 @@
 
 Replaces the template's fake chart data with numbers computed from the real
 business tables (orders / products / sellers / payouts / IM reports / plan
-quotas).
+subscription).
 
 Contract under test:
 
@@ -187,8 +187,8 @@ async def test_usage_block_reflects_the_plan(client, admin_token):
     data = await _overview(client, admin_token)
     usage = data["usage"]
     assert usage["plan"] == "pro"
-    assert usage["products_used"] >= 1
-    assert usage["products_quota"] == 5000
+    assert usage["plan_name"]
+    assert usage["subscription_status"] is not None
     assert usage["days_left"] is not None
 
 

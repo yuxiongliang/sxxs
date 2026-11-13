@@ -178,17 +178,11 @@ async def _order_status(db: AsyncSession, tenant_id: int) -> list[dict]:
 async def _usage(db: AsyncSession, tenant_id: int) -> dict:
     report = await billing_service.usage_report(db, tenant_id)
     plan = report.get("plan") or {}
-    quotas = report.get("quotas") or {}
-    used = report.get("used") or {}
     subscription = report.get("subscription") or {}
     return {
         "plan": plan.get("code"),
         "plan_name": plan.get("name"),
         "subscription_status": subscription.get("status"),
-        "products_used": int(used.get("products", 0)),
-        "products_quota": quotas.get("products"),
-        "members_used": int(used.get("members", 0)),
-        "members_quota": quotas.get("members"),
         "days_left": report.get("days_left"),
     }
 

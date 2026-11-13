@@ -17,7 +17,6 @@ class PlanCreate(BaseModel):
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     trial_days: int = Field(default=14, ge=0, le=365)
-    quotas: dict[str, int | None] | None = None
     features: list[str] | None = None
     sort: int = Field(default=0, ge=0)
     status: str = Field(default="active", pattern="^(active|archived)$")
@@ -43,7 +42,6 @@ class PlanUpdate(BaseModel):
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     trial_days: int | None = Field(default=None, ge=0, le=365)
-    quotas: dict[str, int | None] | None = None
     features: list[str] | None = None
     sort: int | None = Field(default=None, ge=0)
     status: str | None = Field(default=None, pattern="^(active|archived)$")
@@ -62,7 +60,6 @@ class PlanOut(BaseModel):
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     trial_days: int
-    quotas: dict[str, int | None] | None = None
     features: list[str] | None = None
     status: str
     sort: int

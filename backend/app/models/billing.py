@@ -18,7 +18,6 @@ NON_RECURRING_PERIODS = frozenset({"lifetime", "custom"})
 class Plan(Base, TimestampMixin):
     """A SaaS plan the platform sells to tenants.
 
-    ``quotas`` is a metric -> limit map (``None``/missing == unlimited) and
     ``features`` is a list of feature keys the plan unlocks.
     """
 
@@ -38,7 +37,6 @@ class Plan(Base, TimestampMixin):
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # 买断/档期套餐不允许试用（trial_days 必须为 0），由 schema 校验
     trial_days: Mapped[int] = mapped_column(Integer, default=14)
-    quotas: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     features: Mapped[list | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="active", index=True)
     sort: Mapped[int] = mapped_column(Integer, default=0)
