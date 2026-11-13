@@ -89,6 +89,10 @@ async def delete_user(
     response_model=ApiResponse[ResetPasswordResult],
     dependencies=[Depends(require_permission("user:write"))],
 )
-async def reset_password(user_id: int, db: AsyncSession = Depends(get_db)):
-    password = await user_service.reset_password(db, user_id)
+async def reset_password(
+    user_id: int,
+    context: AuthContext = Depends(require_permission("user:write")),
+    db: AsyncSession = Depends(get_db),
+):
+    password = await user_service.reset_password(db, user_id, context.tenant.id)
     return ok(ResetPasswordResult(password=password), "密码已重置")

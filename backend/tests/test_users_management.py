@@ -182,20 +182,24 @@ async def test_department_crud_roundtrip(client, admin_token):
 
 async def test_role_permission_editing_bumps_permission_version(client, admin_token):
     before = (await client.get("/api/v1/auth/me", headers=bearer(admin_token))).json()["data"]
-    roles = (await client.get("/api/v1/roles", headers=bearer(admin_token))).json()["data"]
-    viewer = next(item for item in roles["list"] if item["code"] == "viewer")
+    # 系统内置角色已是全租户共享只读，改用本租户自建角色验证版本号自增。
+    created = await client.post(
+        "/api/v1/roles",
+        headers=bearer(admin_token),
+        json={"code": "version_probe_role", "name": "版本探针"},
+    )
+    assert created.status_code == 200, created.text
+    role_id = created.json()["data"]["id"]
+
     current = (
-        await client.get(
-            f"/api/v1/roles/{viewer['id']}/permissions", headers=bearer(admin_token)
-        )
+        await client.get(f"/api/v1/roles/{role_id}/permissions", headers=bearer(admin_token))
     ).json()["data"]
     assert "all" in current and "selected" in current
-    keep = current["selected"][:1]
 
     response = await client.put(
-        f"/api/v1/roles/{viewer['id']}/permissions",
+        f"/api/v1/roles/{role_id}/permissions",
         headers=bearer(admin_token),
-        json={"permission_codes": keep},
+        json={"permission_codes": ["user:read"]},
     )
     assert response.status_code == 200, response.text
 

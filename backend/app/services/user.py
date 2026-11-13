@@ -1,7 +1,7 @@
 import secrets
 
 from fastapi import HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
@@ -13,6 +13,7 @@ from app.models.tenant import TenantMember
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.services import billing as billing_service
+from app.services import role as role_service
 from app.services.permission import bump_permission_version
 
 
@@ -32,9 +33,26 @@ async def list_users(
     )
 
 
-async def get_user_or_404(db: AsyncSession, user_id: int) -> User:
+async def _is_member(db: AsyncSession, user_id: int, tenant_id: int) -> bool:
+    member_id = await db.scalar(
+        select(TenantMember.id).where(
+            TenantMember.tenant_id == tenant_id, TenantMember.user_id == user_id
+        )
+    )
+    return member_id is not None
+
+
+async def get_user_or_404(db: AsyncSession, user_id: int, tenant_id: int | None = None) -> User:
+    """按 id 取用户。
+
+    传入 tenant_id 时**必须**是本租户的成员，否则一律 404 ——
+    users 表是全局的，别的租户的用户绝不能通过 id 被读写（否则改密码就能接管账号，
+    连平台端的 root 都在内）。
+    """
     user = await user_dao.get_user(db, user_id)
     if user is None:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    if tenant_id is not None and not await _is_member(db, user_id, tenant_id):
         raise HTTPException(status_code=404, detail="用户不存在")
     return user
 
@@ -45,6 +63,10 @@ async def _validate_role(db: AsyncSession, role_code: str) -> None:
         raise HTTPException(status_code=400, detail="角色不存在")
     if role.status != "active":
         raise HTTPException(status_code=400, detail="角色已停用")
+    # 平台角色（admin / platform_admin / platform_support）不归租户分配：
+    # 一旦租户能把成员提成 admin，就等于拿到全站权限。
+    if role_code in role_service.PLATFORM_ROLE_CODES:
+        raise HTTPException(status_code=400, detail="平台角色不可分配给租户成员")
 
 
 async def _validate_department(
@@ -90,7 +112,7 @@ async def create_user(db: AsyncSession, payload: UserCreate, tenant_id: int = 1)
 async def update_user(
     db: AsyncSession, user_id: int, payload: UserUpdate, tenant_id: int = 1
 ) -> User:
-    user = await get_user_or_404(db, user_id)
+    user = await get_user_or_404(db, user_id, tenant_id)
     data = payload.model_dump(exclude_unset=True)
     if "email" in data and data["email"] != user.email:
         exists = await user_dao.get_by_email(db, data["email"])
@@ -130,7 +152,7 @@ async def update_user(
 
 
 async def delete_user(db: AsyncSession, user_id: int, tenant_id: int = 1) -> None:
-    user = await get_user_or_404(db, user_id)
+    user = await get_user_or_404(db, user_id, tenant_id)
     if user.role == "admin" and await user_dao.count_admins(db) <= 1:
         raise HTTPException(status_code=400, detail="至少保留一个管理员账号")
     await db.execute(
@@ -149,13 +171,20 @@ async def delete_user(db: AsyncSession, user_id: int, tenant_id: int = 1) -> Non
             TenantMember.user_id == user.id,
         )
     )
-    await user_dao.delete_user(db, user)
+    await db.flush()
+    # 这个用户可能还在别的租户当成员：入全局 users 表是全库共享的，
+    # 只解除本租户的成员关系，不能把他的账号一并删了。
+    still_member = await db.scalar(
+        select(func.count(TenantMember.id)).where(TenantMember.user_id == user.id)
+    )
+    if not still_member:
+        await user_dao.delete_user(db, user)
     await bump_permission_version(db, tenant_id)
     await db.commit()
 
 
-async def reset_password(db: AsyncSession, user_id: int) -> str:
-    user = await get_user_or_404(db, user_id)
+async def reset_password(db: AsyncSession, user_id: int, tenant_id: int = 1) -> str:
+    user = await get_user_or_404(db, user_id, tenant_id)
     temporary_password = f"Antd@{secrets.token_urlsafe(8)}"
     user.password_hash = hash_password(temporary_password)
     await db.commit()

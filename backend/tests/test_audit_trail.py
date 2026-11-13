@@ -301,21 +301,25 @@ async def test_tenant_suspend_and_resume_are_audited(client, admin_token, platfo
 
 
 async def test_role_permission_change_is_audited(client, admin_token):
-    roles = (await client.get("/api/v1/roles", headers=bearer(admin_token))).json()["data"]
-    viewer = next(item for item in roles["list"] if item["code"] == "viewer")
-    current = (
-        await client.get(
-            f"/api/v1/roles/{viewer['id']}/permissions", headers=bearer(admin_token)
-        )
-    ).json()["data"]
-
-    await client.put(
-        f"/api/v1/roles/{viewer['id']}/permissions",
+    # 系统内置角色（viewer 等）是全租户共享的只读角色，不能再被租户改；
+    # 这里改用本租户自建的角色来验证审计落库。
+    created = await client.post(
+        "/api/v1/roles",
         headers=bearer(admin_token),
-        json={"permission_codes": current["selected"]},
+        json={"code": "audit_probe_role", "name": "审计探针角色"},
     )
+    assert created.status_code == 200, created.text
+    role_id = created.json()["data"]["id"]
+
+    changed = await client.put(
+        f"/api/v1/roles/{role_id}/permissions",
+        headers=bearer(admin_token),
+        json={"permission_codes": ["user:read"]},
+    )
+    assert changed.status_code == 200, changed.text
+
     rows = await _logs(
-        client, admin_token, action="role.permissions_updated", target_id=viewer["id"]
+        client, admin_token, action="role.permissions_updated", target_id=role_id
     )
     assert rows
     assert "permission_codes" in rows[0]["after"]

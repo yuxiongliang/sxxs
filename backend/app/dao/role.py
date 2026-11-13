@@ -12,10 +12,14 @@ async def list_roles(
     keyword: str | None = None,
     status: str | None = None,
     exclude_codes: frozenset[str] | None = None,
+    tenant_id: int | None = None,
 ) -> tuple[list[Role], int]:
     conditions = []
     if exclude_codes:
         conditions.append(Role.code.notin_(tuple(exclude_codes)))
+    if tenant_id is not None:
+        # 系统共享角色（tenant_id 为空）+ 本租户自建角色；别的租户的自建角色不可见
+        conditions.append(or_(Role.tenant_id.is_(None), Role.tenant_id == tenant_id))
     if keyword:
         pattern = f"%{keyword}%"
         conditions.append(or_(Role.name.ilike(pattern), Role.code.ilike(pattern)))

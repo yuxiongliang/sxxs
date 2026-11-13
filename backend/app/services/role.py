@@ -31,14 +31,28 @@ async def list_roles(
     page_size: int,
     keyword: str | None = None,
     status: str | None = None,
+    tenant_id: int | None = None,
 ) -> tuple[list[Role], int]:
-    """租户控制台的角色列表：平台角色一律不出现。"""
+    """租户控制台的角色列表：平台角色一律不出现，别的租户的自建角色也不出现。"""
     return await role_dao.list_roles(
-        db, current, page_size, keyword, status, exclude_codes=PLATFORM_ROLE_CODES
+        db,
+        current,
+        page_size,
+        keyword,
+        status,
+        exclude_codes=PLATFORM_ROLE_CODES,
+        tenant_id=tenant_id,
     )
 
 
-async def get_role_or_404(db: AsyncSession, role_id: int, *, allow_platform: bool = False) -> Role:
+async def get_role_or_404(
+    db: AsyncSession,
+    role_id: int,
+    *,
+    allow_platform: bool = False,
+    tenant_id: int | None = None,
+    for_write: bool = False,
+) -> Role:
     role = await role_dao.get_role(db, role_id)
     if role is None:
         raise HTTPException(status_code=404, detail="角色不存在")
@@ -46,22 +60,36 @@ async def get_role_or_404(db: AsyncSession, role_id: int, *, allow_platform: boo
     # 也不会泄露该 id 是否真实存在之外的信息。
     if not allow_platform and is_platform_role(role):
         raise HTTPException(status_code=403, detail="平台角色不可在租户控制台维护")
+    if tenant_id is not None:
+        # 别的租户自建的角色：对本租户等于不存在
+        if role.tenant_id is not None and role.tenant_id != tenant_id:
+            raise HTTPException(status_code=404, detail="角色不存在")
+        # 系统共享角色（tenant_id 为空）所有租户都在用，不能由某一个租户改
+        if for_write and role.tenant_id is None:
+            raise HTTPException(
+                status_code=403,
+                detail="系统内置角色为全租户共享、只读；如需调整请新建一个本租户角色",
+            )
     return role
 
 
-async def create_role(db: AsyncSession, payload: RoleCreate) -> Role:
+async def create_role(db: AsyncSession, payload: RoleCreate, tenant_id: int | None = None) -> Role:
     if await role_dao.get_by_code(db, payload.code):
         raise HTTPException(status_code=409, detail="角色编码已存在")
     if payload.status not in VALID_STATUS:
         raise HTTPException(status_code=400, detail="角色状态不合法")
-    role = await role_dao.create_role(db, payload.model_dump())
+    if payload.code in PLATFORM_ROLE_CODES:
+        raise HTTPException(status_code=400, detail="平台角色编码已被占用")
+    role = await role_dao.create_role(db, {**payload.model_dump(), "tenant_id": tenant_id})
     await db.commit()
     await db.refresh(role)
     return role
 
 
-async def update_role(db: AsyncSession, role_id: int, payload: RoleUpdate) -> Role:
-    role = await get_role_or_404(db, role_id)
+async def update_role(
+    db: AsyncSession, role_id: int, payload: RoleUpdate, tenant_id: int | None = None
+) -> Role:
+    role = await get_role_or_404(db, role_id, tenant_id=tenant_id, for_write=True)
     data = payload.model_dump(exclude_unset=True)
     if "status" in data and data["status"] not in VALID_STATUS:
         raise HTTPException(status_code=400, detail="角色状态不合法")
@@ -72,8 +100,10 @@ async def update_role(db: AsyncSession, role_id: int, payload: RoleUpdate) -> Ro
     return role
 
 
-async def get_role_permissions(db: AsyncSession, role_id: int) -> dict:
-    await get_role_or_404(db, role_id)
+async def get_role_permissions(
+    db: AsyncSession, role_id: int, tenant_id: int | None = None
+) -> dict:
+    await get_role_or_404(db, role_id, tenant_id=tenant_id)
     all_permissions = list(
         (await db.scalars(select(Permission).order_by(Permission.module, Permission.code))).all()
     )
@@ -119,7 +149,9 @@ def _guard_permission_grants(context: AuthContext, permission_codes: list[str]) 
 async def set_role_permissions(
     db: AsyncSession, role_id: int, context: AuthContext, permission_codes: list[str]
 ) -> dict:
-    await get_role_or_404(db, role_id)
+    await get_role_or_404(
+        db, role_id, tenant_id=context.tenant.id, for_write=True
+    )
     tenant_id = context.tenant.id
     _guard_permission_grants(context, permission_codes)
     permissions = list(
@@ -148,8 +180,8 @@ async def set_role_permissions(
     return await get_role_permissions(db, role_id)
 
 
-async def delete_role(db: AsyncSession, role_id: int) -> None:
-    role = await get_role_or_404(db, role_id)
+async def delete_role(db: AsyncSession, role_id: int, tenant_id: int | None = None) -> None:
+    role = await get_role_or_404(db, role_id, tenant_id=tenant_id, for_write=True)
     if await role_dao.count_users(db, role.code) > 0:
         raise HTTPException(status_code=409, detail="该角色仍被用户引用，不能删除")
     # 先清掉权限关联：role_permissions 有外键，不先删会让删除直接 500

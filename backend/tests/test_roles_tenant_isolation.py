@@ -125,3 +125,64 @@ def test_guard_blocks_privilege_escalation():
 async def test_operator_without_role_manage_is_rejected(client, operator_token):
     response = await client.get("/api/v1/roles", headers=bearer(operator_token))
     assert response.status_code == 403, response.text
+
+
+async def _new_tenant(client, platform_token, slug: str) -> str:
+    email = f"owner@{slug}.example.com"
+    created = await client.post(
+        "/api/v1/platform/tenants",
+        headers=bearer(platform_token),
+        json={
+            "name": f"{slug} 站",
+            "slug": slug,
+            "email": email,
+            "nickname": f"{slug} 管理员",
+            "password": "RoleScope@123456",
+        },
+    )
+    assert created.status_code == 200, created.text
+    from tests.conftest import login
+
+    return (await login(client, email, "RoleScope@123456"))["access_token"]
+
+
+async def test_custom_role_is_private_to_its_tenant(client, platform_token, db_session):
+    """A 租户自建的角色，B 租户既看不到也改不了。"""
+    token_a = await _new_tenant(client, platform_token, "role-scope-a")
+    token_b = await _new_tenant(client, platform_token, "role-scope-b")
+
+    created = await client.post(
+        "/api/v1/roles",
+        headers=bearer(token_a),
+        json={"code": "role_scope_custom", "name": "A 站专属角色"},
+    )
+    assert created.status_code == 200, created.text
+    role_id = created.json()["data"]["id"]
+
+    listing = await client.get("/api/v1/roles?pageSize=500", headers=bearer(token_b))
+    codes = {row["code"] for row in listing.json()["data"]["list"]}
+    assert "role_scope_custom" not in codes, "B 租户不该看到 A 租户自建的角色"
+
+    touched = await client.put(
+        f"/api/v1/roles/{role_id}/permissions",
+        headers=bearer(token_b),
+        json={"permission_codes": ["user:read"]},
+    )
+    assert touched.status_code == 404, touched.text
+
+
+async def test_shared_system_role_is_readonly_for_tenants(client, platform_token, db_session):
+    """viewer 是所有租户共用的系统角色：可以看，不能改。"""
+    token = await _new_tenant(client, platform_token, "role-scope-c")
+    role_id = await _role_id(db_session, "viewer")
+
+    readable = await client.get(f"/api/v1/roles/{role_id}/permissions", headers=bearer(token))
+    assert readable.status_code == 200, readable.text
+
+    writable = await client.put(
+        f"/api/v1/roles/{role_id}/permissions",
+        headers=bearer(token),
+        json={"permission_codes": ["user:read"]},
+    )
+    assert writable.status_code == 403, writable.text
+    assert "只读" in writable.text
